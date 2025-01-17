@@ -1,48 +1,73 @@
+use interp::{error::SyntaxError, lexer::Lexer};
 use std::io::Write;
 
-fn main() -> Result<(), std::io::Error> {
-    let args: Vec<String> = std::env::args().collect();
+struct Args {
+    commands: Vec<String>,
+}
 
-    if args.len() > 2 {
-        println!("Usage: twri [script]");
-        std::process::exit(64)
-    } else if args.len() == 2 {
-        run_file(&args[1])?;
-    } else {
-        run_prompt()?;
+impl Args {
+    fn parse() -> Self {
+        Self {
+            commands: std::env::args().collect(),
+        }
     }
-
-    Ok(())
 }
 
-fn run_file(path: &str) -> Result<(), std::io::Error> {
-    let file = std::fs::read(path)?;
-    run(&String::from_utf8(file).unwrap())?;
-    Ok(())
+fn main() {
+    let args = Args::parse();
+
+    match args.commands.len() {
+        1 => {
+            if let Err(e) = run_prompt() {
+                eprintln!("{e}");
+                std::process::exit(65)
+            }
+        }
+        2 => {
+            if let Err(e) = run_file(&args.commands[1]) {
+                eprintln!("{e}");
+                std::process::exit(65)
+            }
+        }
+        _ => {
+            eprintln!("Usage: twli [script]");
+            std::process::exit(64)
+        }
+    }
 }
 
-fn run_prompt() -> Result<(), std::io::Error> {
-    let stdin = std::io::stdin();
+fn run_prompt() -> Result<(), SyntaxError> {
     let mut input = String::new();
+    let stdin = std::io::stdin();
 
     loop {
         print!("> ");
-        std::io::stdout().flush()?;
+        std::io::stdout().flush().unwrap();
 
         input.clear();
-        stdin.read_line(&mut input)?;
+        stdin.read_line(&mut input).unwrap();
 
         if input.trim() == "exit" {
-            break;
+            return Ok(());
         }
 
-        run(&input.trim())?;
+        run(&input.trim())?
     }
-
-    Ok(())
 }
 
-fn run(input: &str) -> Result<(), std::io::Error> {
-    println!("{input}");
+fn run_file(path: &str) -> Result<(), SyntaxError> {
+    let f = std::fs::read(path).unwrap();
+    run(&String::from_utf8(f).unwrap())
+}
+
+fn run(source: &str) -> Result<(), SyntaxError> {
+    let mut lex = Lexer::new(source.to_string());
+
+    let tokens = lex.tokenized();
+
+    for token in tokens {
+        println!("{token}")
+    }
+
     Ok(())
 }
