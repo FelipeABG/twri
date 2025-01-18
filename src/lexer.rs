@@ -1,4 +1,4 @@
-use std::{any::Any, slice::Iter};
+use std::slice::Iter;
 
 use crate::{
     error::SyntaxError,
@@ -34,12 +34,8 @@ impl Lexer {
         }
 
         self.tokens
-            .push(Token::new(TokenKind::Eof, "".to_string(), None, self.line));
+            .push(Token::new(TokenKind::Eof, "".to_string(), self.line));
         Ok(self.tokens.iter())
-    }
-
-    fn finished(&self) -> bool {
-        self.current >= self.source.len()
     }
 
     fn process_next(&mut self) -> Result<(), SyntaxError> {
@@ -101,14 +97,47 @@ impl Lexer {
                     Ok(self.add_token(TokenKind::Slash))
                 }
             }
+            //literals
+            '"' => self.string(),
+            //meaningless chars
+            ' ' | '\r' | '\t' => Ok(()),
             '\n' => {
                 //if it is a new line, increment the line number;
                 self.line += 1;
                 Ok(())
             }
-            ' ' | '\r' | '\t' => Ok(()),
             _ => Err(SyntaxError::new(self.line, "Unexpected character", "")),
         }
+    }
+
+    fn string(&mut self) -> Result<(), SyntaxError> {
+        while self.peek() != '"' && !self.finished() {
+            if self.peek() == '\n' {
+                self.line += 1
+            }
+            self.next_char();
+        }
+
+        if self.finished() {
+            return Err(SyntaxError::new(self.line, "Unterminated string", ""));
+        }
+
+        self.next_char();
+
+        let value = &self.source[self.start + 1..self.current - 1];
+        let lexeme = &self.source[self.start..self.current];
+
+        self.tokens.push(Token::new(
+            TokenKind::String(value.to_string()),
+            lexeme.to_string(),
+            self.line,
+        ));
+
+        Ok(())
+    }
+
+    fn finished(&self) -> bool {
+        self.current >= self.source.len()
     }
 
     fn peek(&self) -> char {
@@ -120,13 +149,9 @@ impl Lexer {
     }
 
     fn add_token(&mut self, ty: TokenKind) {
-        let tk = self.generate_token(ty, None);
-        self.tokens.push(tk);
-    }
-
-    fn generate_token(&mut self, ty: TokenKind, literal: Option<Box<dyn Any>>) -> Token {
         let lexeme = &self.source[self.start..self.current];
-        Token::new(ty, lexeme.to_string(), literal, self.line)
+        let tk = Token::new(ty, lexeme.to_string(), self.line);
+        self.tokens.push(tk);
     }
 
     fn next_char(&mut self) -> char {

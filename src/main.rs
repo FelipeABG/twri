@@ -67,7 +67,7 @@ fn run(source: &str) -> Result<(), SyntaxError> {
     let mut lex = Lexer::new(source.to_string());
 
     for token in lex.tokenized()? {
-        println!("{token:?}")
+        println!("{token:#?}")
     }
 
     Ok(())
