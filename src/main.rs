@@ -51,7 +51,10 @@ fn run_prompt() -> Result<(), SyntaxError> {
             return Ok(());
         }
 
-        run(&input.trim())?
+        match run(&input.trim()) {
+            Ok(_) => continue,
+            Err(e) => eprintln!("{e}"),
+        }
     }
 }
 
@@ -63,10 +66,8 @@ fn run_file(path: &str) -> Result<(), SyntaxError> {
 fn run(source: &str) -> Result<(), SyntaxError> {
     let mut lex = Lexer::new(source.to_string());
 
-    let tokens = lex.tokenized();
-
-    for token in tokens {
-        println!("{token}")
+    for token in lex.tokenized()? {
+        println!("{token:?}")
     }
 
     Ok(())

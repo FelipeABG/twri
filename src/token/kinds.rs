@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum TokenKind {
     //single char Tokens
     LeftParen,

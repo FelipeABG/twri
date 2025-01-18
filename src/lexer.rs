@@ -1,16 +1,18 @@
-use std::any::Any;
+use std::{any::Any, slice::Iter};
 
 use crate::{
     error::SyntaxError,
     token::{kinds::TokenKind, Token},
 };
 
+// MENTAL MODEL:
+// parses each character of the source string into the language tokens
 pub struct Lexer {
     source: String,
     tokens: Vec<Token>,
-    start: usize,
     current: usize,
     line: usize,
+    start: usize,
 }
 
 impl Lexer {
@@ -18,63 +20,105 @@ impl Lexer {
         Self {
             source,
             tokens: Vec::new(),
-            start: 0,
             current: 0,
             line: 1,
+            start: 0,
         }
     }
 
-    pub fn tokenized(&mut self) -> Vec<&Token> {
+    pub fn tokenized(&mut self) -> Result<Iter<'_, Token>, SyntaxError> {
         while !self.finished() {
             self.start = self.current;
-            self.scan_token();
+
+            self.process_next()?
         }
 
         self.tokens
             .push(Token::new(TokenKind::Eof, "".to_string(), None, self.line));
-        self.tokens.iter().collect()
+        Ok(self.tokens.iter())
     }
 
     fn finished(&self) -> bool {
         self.current >= self.source.len()
     }
 
-    fn scan_token(&mut self) {
-        let char = self.next();
-        match char {
+    fn process_next(&mut self) -> Result<(), SyntaxError> {
+        let c = self.next_char();
+
+        match c {
             //single char tokens
-            '(' => self.add_token(TokenKind::LeftParen),
-            ')' => self.add_token(TokenKind::RightParen),
-            '{' => self.add_token(TokenKind::LeftBrace),
-            '}' => self.add_token(TokenKind::RightBrace),
-            ',' => self.add_token(TokenKind::Comma),
-            '.' => self.add_token(TokenKind::Dot),
-            '-' => self.add_token(TokenKind::Minus),
-            '+' => self.add_token(TokenKind::Plus),
-            ';' => self.add_token(TokenKind::Semicolon),
-            '*' => self.add_token(TokenKind::Star),
-            // single or double char tokens
-            _ => panic!(
-                "{}",
-                SyntaxError::new(self.line, "Unexpected character", "")
-            ),
+            '(' => Ok(self.add_token(TokenKind::LeftParen)),
+            ')' => Ok(self.add_token(TokenKind::RightParen)),
+            '{' => Ok(self.add_token(TokenKind::LeftBrace)),
+            '}' => Ok(self.add_token(TokenKind::RightBrace)),
+            ',' => Ok(self.add_token(TokenKind::Comma)),
+            '.' => Ok(self.add_token(TokenKind::Dot)),
+            ';' => Ok(self.add_token(TokenKind::Semicolon)),
+            '+' => Ok(self.add_token(TokenKind::Plus)),
+            '-' => Ok(self.add_token(TokenKind::Minus)),
+            '*' => Ok(self.add_token(TokenKind::Star)),
+            //single or double char tokens
+            '!' => {
+                let kind = if self.complement('=') {
+                    TokenKind::BangEqual
+                } else {
+                    TokenKind::Bang
+                };
+                Ok(self.add_token(kind))
+            }
+            '=' => {
+                let kind = if self.complement('=') {
+                    TokenKind::EqualEqual
+                } else {
+                    TokenKind::Equal
+                };
+                Ok(self.add_token(kind))
+            }
+            '>' => {
+                let kind = if self.complement('=') {
+                    TokenKind::GreaterEqual
+                } else {
+                    TokenKind::Greater
+                };
+                Ok(self.add_token(kind))
+            }
+            '<' => {
+                let kind = if self.complement('=') {
+                    TokenKind::LessEqual
+                } else {
+                    TokenKind::Less
+                };
+                Ok(self.add_token(kind))
+            }
+            _ => Err(SyntaxError::new(self.line, "Unexpected character", "")),
         }
     }
 
-    fn next(&mut self) -> char {
+    fn add_token(&mut self, ty: TokenKind) {
+        let tk = self.generate_token(ty, None);
+        self.tokens.push(tk);
+    }
+
+    fn generate_token(&mut self, ty: TokenKind, literal: Option<Box<dyn Any>>) -> Token {
+        let lexeme = &self.source[self.start..self.current];
+        Token::new(ty, lexeme.to_string(), literal, self.line)
+    }
+
+    fn next_char(&mut self) -> char {
         let char = self.source.chars().nth(self.current).unwrap();
         self.current += 1;
         char
     }
 
-    fn add_token(&mut self, kind: TokenKind) {
-        self.generate_token(kind, None)
-    }
+    fn complement(&mut self, expected: char) -> bool {
+        if self.finished() {
+            return false;
+        };
+        if self.source.chars().nth(self.current).unwrap() != expected {
+            return false;
+        };
 
-    fn generate_token(&mut self, kind: TokenKind, literal: Option<Box<dyn Any>>) {
-        let lexeme = &self.source[self.start..self.current];
-
-        self.tokens
-            .push(Token::new(kind, lexeme.to_string(), literal, self.line));
+        self.current += 1;
+        true
     }
 }
