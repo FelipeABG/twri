@@ -51,7 +51,7 @@ fn run_prompt() -> Result<(), SyntaxError> {
             return Ok(());
         }
 
-        match run(&input.trim()) {
+        match run(&input) {
             Ok(_) => continue,
             Err(e) => eprintln!("{e}"),
         }

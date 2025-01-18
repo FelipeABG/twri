@@ -90,8 +90,33 @@ impl Lexer {
                 };
                 Ok(self.add_token(kind))
             }
+            '/' => {
+                if self.complement('/') {
+                    //if it is a comment, skip the line
+                    while self.peek() != '\n' && !self.finished() {
+                        self.next_char();
+                    }
+                    Ok(())
+                } else {
+                    Ok(self.add_token(TokenKind::Slash))
+                }
+            }
+            '\n' => {
+                //if it is a new line, increment the line number;
+                self.line += 1;
+                Ok(())
+            }
+            ' ' | '\r' | '\t' => Ok(()),
             _ => Err(SyntaxError::new(self.line, "Unexpected character", "")),
         }
+    }
+
+    fn peek(&self) -> char {
+        if self.finished() {
+            return '\0';
+        }
+
+        self.source.chars().nth(self.current).unwrap()
     }
 
     fn add_token(&mut self, ty: TokenKind) {
