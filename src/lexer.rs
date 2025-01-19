@@ -11,6 +11,7 @@ use crate::{
 // single or double char: check if the next char is a match to the first char.
 // literals: go to the end of the literal and parses it into the object representation
 // unused: skip them
+
 pub struct Lexer {
     source: String,
     tokens: Vec<Token>,
