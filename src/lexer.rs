@@ -7,6 +7,10 @@ use crate::{
 
 // MENTAL MODEL:
 // parses each character of the source string into the language tokens
+// single char: just parses it directly
+// single or double char: check if the next char is a match to the first char.
+// literals: go to the end of the literal and parses it into the object representation
+// unused: skip them
 pub struct Lexer {
     source: String,
     tokens: Vec<Token>,
@@ -99,15 +103,32 @@ impl Lexer {
             }
             //literals
             '"' => self.string(),
+            c if c.is_numeric() => self.number(),
             //meaningless chars
             ' ' | '\r' | '\t' => Ok(()),
             '\n' => {
-                //if it is a new line, increment the line number;
                 self.line += 1;
                 Ok(())
             }
             _ => Err(SyntaxError::new(self.line, "Unexpected character", "")),
         }
+    }
+
+    fn number(&mut self) -> Result<(), SyntaxError> {
+        while self.peek().is_numeric() {
+            self.next_char();
+        }
+
+        if self.peek() == '.' && self.peek_next().is_numeric() {
+            self.next_char();
+
+            while self.peek().is_numeric() {
+                self.next_char();
+            }
+        }
+
+        let value: f64 = self.source[self.start..self.current].parse().unwrap();
+        Ok(self.add_token(TokenKind::Number(value)))
     }
 
     fn string(&mut self) -> Result<(), SyntaxError> {
@@ -146,6 +167,14 @@ impl Lexer {
         }
 
         self.source.chars().nth(self.current).unwrap()
+    }
+
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.source.len() {
+            return '\0';
+        }
+
+        self.source.chars().nth(self.current + 1).unwrap()
     }
 
     fn add_token(&mut self, ty: TokenKind) {
