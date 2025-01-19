@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TokenKind {
     //single char Tokens
     LeftParen,
@@ -33,7 +33,7 @@ pub enum TokenKind {
     Class,
     Else,
     False,
-    Fun,
+    Fn,
     For,
     If,
     Nil,

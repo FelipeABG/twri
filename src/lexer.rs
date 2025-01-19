@@ -1,4 +1,4 @@
-use std::slice::Iter;
+use std::{collections::HashMap, slice::Iter};
 
 use crate::{
     error::SyntaxError,
@@ -17,16 +17,35 @@ pub struct Lexer {
     current: usize,
     line: usize,
     start: usize,
+    keywords: HashMap<String, TokenKind>,
 }
 
 impl Lexer {
     pub fn new(source: String) -> Self {
+        let mut keywords = HashMap::new();
+        keywords.insert("and".into(), TokenKind::And);
+        keywords.insert("class".into(), TokenKind::Class);
+        keywords.insert("else".into(), TokenKind::Class);
+        keywords.insert("false".into(), TokenKind::False);
+        keywords.insert("fn".into(), TokenKind::Fn);
+        keywords.insert("for".into(), TokenKind::For);
+        keywords.insert("if".into(), TokenKind::If);
+        keywords.insert("nil".into(), TokenKind::Nil);
+        keywords.insert("or".into(), TokenKind::Print);
+        keywords.insert("return".into(), TokenKind::Return);
+        keywords.insert("super".into(), TokenKind::Super);
+        keywords.insert("this".into(), TokenKind::This);
+        keywords.insert("true".into(), TokenKind::True);
+        keywords.insert("var".into(), TokenKind::Var);
+        keywords.insert("while".into(), TokenKind::While);
+
         Self {
             source,
             tokens: Vec::new(),
             current: 0,
             line: 1,
             start: 0,
+            keywords,
         }
     }
 
@@ -104,13 +123,31 @@ impl Lexer {
             //literals
             '"' => self.string(),
             c if c.is_numeric() => self.number(),
+            c if c.is_alphabetic() || c == '_' => self.identifier(),
             //meaningless chars
             ' ' | '\r' | '\t' => Ok(()),
             '\n' => {
                 self.line += 1;
                 Ok(())
             }
-            _ => Err(SyntaxError::new(self.line, "Unexpected character", "")),
+            c => Err(SyntaxError::new(
+                self.line,
+                "Unexpected character",
+                &format!("{c}"),
+            )),
+        }
+    }
+
+    fn identifier(&mut self) -> Result<(), SyntaxError> {
+        while self.peek().is_alphanumeric() {
+            self.next_char();
+        }
+
+        let lexeme = &self.source[self.start..self.current];
+
+        match self.keywords.get(lexeme) {
+            Some(kw) => Ok(self.add_token(kw.clone())),
+            None => Ok(self.add_token(TokenKind::Identifier)),
         }
     }
 

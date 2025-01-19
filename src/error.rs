@@ -21,6 +21,10 @@ impl Error for SyntaxError {}
 
 impl Display for SyntaxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[line {}] Error {}: {}", self.line, self.place, self.msg)
+        write!(
+            f,
+            "[line {}] Error: {} '{}'",
+            self.line, self.msg, self.place
+        )
     }
 }
