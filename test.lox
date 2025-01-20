@@ -1,0 +1,8 @@
+fn main() {
+  print "hello world";
+  foo();
+}
+
+fn foo() {
+  return 1 + 5;
+}

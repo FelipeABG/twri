@@ -57,8 +57,6 @@ impl Lexer {
             self.process_next()?
         }
 
-        self.tokens
-            .push(Token::new(TokenKind::Eof, "".to_string(), self.line));
         Ok(self.tokens.iter())
     }
 
@@ -67,16 +65,46 @@ impl Lexer {
 
         match c {
             //single char tokens
-            '(' => Ok(self.add_token(TokenKind::LeftParen)),
-            ')' => Ok(self.add_token(TokenKind::RightParen)),
-            '{' => Ok(self.add_token(TokenKind::LeftBrace)),
-            '}' => Ok(self.add_token(TokenKind::RightBrace)),
-            ',' => Ok(self.add_token(TokenKind::Comma)),
-            '.' => Ok(self.add_token(TokenKind::Dot)),
-            ';' => Ok(self.add_token(TokenKind::Semicolon)),
-            '+' => Ok(self.add_token(TokenKind::Plus)),
-            '-' => Ok(self.add_token(TokenKind::Minus)),
-            '*' => Ok(self.add_token(TokenKind::Star)),
+            '(' => {
+                self.add_token(TokenKind::LeftParen);
+                Ok(())
+            }
+            ')' => {
+                self.add_token(TokenKind::RightParen);
+                Ok(())
+            }
+            '{' => {
+                self.add_token(TokenKind::LeftBrace);
+                Ok(())
+            }
+            '}' => {
+                self.add_token(TokenKind::RightBrace);
+                Ok(())
+            }
+            ',' => {
+                self.add_token(TokenKind::Comma);
+                Ok(())
+            }
+            '.' => {
+                self.add_token(TokenKind::Dot);
+                Ok(())
+            }
+            ';' => {
+                self.add_token(TokenKind::Semicolon);
+                Ok(())
+            }
+            '+' => {
+                self.add_token(TokenKind::Plus);
+                Ok(())
+            }
+            '-' => {
+                self.add_token(TokenKind::Minus);
+                Ok(())
+            }
+            '*' => {
+                self.add_token(TokenKind::Star);
+                Ok(())
+            }
             //single or double char tokens
             '!' => {
                 let kind = if self.complement('=') {
@@ -84,7 +112,8 @@ impl Lexer {
                 } else {
                     TokenKind::Bang
                 };
-                Ok(self.add_token(kind))
+                self.add_token(kind);
+                Ok(())
             }
             '=' => {
                 let kind = if self.complement('=') {
@@ -92,7 +121,8 @@ impl Lexer {
                 } else {
                     TokenKind::Equal
                 };
-                Ok(self.add_token(kind))
+                self.add_token(kind);
+                Ok(())
             }
             '>' => {
                 let kind = if self.complement('=') {
@@ -100,7 +130,8 @@ impl Lexer {
                 } else {
                     TokenKind::Greater
                 };
-                Ok(self.add_token(kind))
+                self.add_token(kind);
+                Ok(())
             }
             '<' => {
                 let kind = if self.complement('=') {
@@ -108,7 +139,8 @@ impl Lexer {
                 } else {
                     TokenKind::Less
                 };
-                Ok(self.add_token(kind))
+                self.add_token(kind);
+                Ok(())
             }
             '/' => {
                 if self.complement('/') {
@@ -118,7 +150,8 @@ impl Lexer {
                     }
                     Ok(())
                 } else {
-                    Ok(self.add_token(TokenKind::Slash))
+                    self.add_token(TokenKind::Slash);
+                    Ok(())
                 }
             }
             //literals
@@ -147,8 +180,14 @@ impl Lexer {
         let lexeme = &self.source[self.start..self.current];
 
         match self.keywords.get(lexeme) {
-            Some(kw) => Ok(self.add_token(kw.clone())),
-            None => Ok(self.add_token(TokenKind::Identifier)),
+            Some(kw) => {
+                self.add_token(kw.clone());
+                Ok(())
+            }
+            None => {
+                self.add_token(TokenKind::Identifier);
+                Ok(())
+            }
         }
     }
 
@@ -166,7 +205,8 @@ impl Lexer {
         }
 
         let value: f64 = self.source[self.start..self.current].parse().unwrap();
-        Ok(self.add_token(TokenKind::Number(value)))
+        self.add_token(TokenKind::Number(value));
+        Ok(())
     }
 
     fn string(&mut self) -> Result<(), SyntaxError> {
