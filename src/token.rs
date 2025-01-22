@@ -3,12 +3,12 @@ use kinds::TokenKind;
 pub mod kinds;
 
 // Token = lexeme + some information
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct Token {
-    kind: TokenKind, //type of the token
-    lexeme: String,  //substring representation of the token
-    line: usize,     //token line in the source
+    pub kind: TokenKind, //type of the token
+    pub lexeme: String,  //substring representation of the token
+    pub line: usize,     //token line in the source
 }
 
 impl Token {
