@@ -1,6 +1,8 @@
-use std::{error::Error, fmt::Display};
+use std::{
+    error::Error,
+    fmt::{Debug, Display},
+};
 
-#[derive(Debug)]
 pub struct SyntaxError {
     line: usize,
     msg: String,
@@ -23,8 +25,24 @@ impl Display for SyntaxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[line {}] Error: {} '{}'",
-            self.line, self.msg, self.place
+            "> {} [line {}] Error: {} '{}'",
+            std::any::type_name::<Self>().split("::").last().unwrap(),
+            self.line,
+            self.msg,
+            self.place
+        )
+    }
+}
+
+impl Debug for SyntaxError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "> {} [line {}] Error: {} '{}'",
+            std::any::type_name::<Self>().split("::").last().unwrap(),
+            self.line,
+            self.msg,
+            self.place
         )
     }
 }
