@@ -1,50 +1,14 @@
-use std::{
-    error::Error,
-    fmt::{Debug, Display},
-};
+use thiserror::Error;
 
-pub struct SyntaxError {
-    line: usize,
-    msg: String,
-    place: String,
+#[derive(Error, Debug)]
+pub enum InterpErr {
+    #[error("SyntaxError [line {line}] Error: {msg} '{place}'")]
+    SyntaxError {
+        line: usize,
+        msg: String,
+        place: String,
+    },
+
+    #[error("RuntimeError [line {line}] Error: {msg}")]
+    RuntimeError { line: usize, msg: String },
 }
-
-impl SyntaxError {
-    pub fn new(line: usize, msg: &str, place: &str) -> Self {
-        Self {
-            line,
-            msg: msg.to_string(),
-            place: place.to_string(),
-        }
-    }
-}
-
-impl Error for SyntaxError {}
-
-impl Display for SyntaxError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "> {} [line {}] Error: {} at '{}'",
-            std::any::type_name::<Self>().split("::").last().unwrap(),
-            self.line,
-            self.msg,
-            self.place
-        )
-    }
-}
-
-impl Debug for SyntaxError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "> {} [line {}] Error: {} '{}'",
-            std::any::type_name::<Self>().split("::").last().unwrap(),
-            self.line,
-            self.msg,
-            self.place
-        )
-    }
-}
-
-pub struct RuntimeError {}

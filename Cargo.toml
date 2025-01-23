@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 define-macro = {git = "https://github.com/FelipeABG/define-macro"}
+thiserror = "2.0.11"

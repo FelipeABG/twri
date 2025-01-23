@@ -1,4 +1,4 @@
-use interp::{error::SyntaxError, lexer::Lexer, parser::Parser};
+use interp::{error::InterpErr, interp::Interpreter, lexer::Lexer, parser::Parser};
 use std::io::Write;
 
 struct Args {
@@ -36,7 +36,7 @@ fn main() {
     }
 }
 
-fn run_prompt() -> Result<(), SyntaxError> {
+fn run_prompt() -> Result<(), InterpErr> {
     let mut input = String::new();
     let stdin = std::io::stdin();
 
@@ -53,20 +53,20 @@ fn run_prompt() -> Result<(), SyntaxError> {
 
         match run(&input) {
             Ok(_) => continue,
-            Err(e) => eprintln!("{e}"),
+            Err(e) => eprintln!(">{e}"),
         }
     }
 }
 
-fn run_file(path: &str) -> Result<(), SyntaxError> {
+fn run_file(path: &str) -> Result<(), InterpErr> {
     let f = std::fs::read(path).unwrap();
     run(&String::from_utf8(f).unwrap())
 }
 
-fn run(source: &str) -> Result<(), SyntaxError> {
+fn run(source: &str) -> Result<(), InterpErr> {
     let mut lexer = Lexer::new(source.to_string());
     let mut parser = Parser::new(lexer.tokenized()?.map(|t| t.clone()).collect());
-    println!("{:#?}", parser.parse()?);
+    Interpreter::interpret(parser.parse()?)?;
 
     Ok(())
 }

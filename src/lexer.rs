@@ -1,7 +1,7 @@
 use std::{collections::HashMap, slice::Iter};
 
 use crate::{
-    error::SyntaxError,
+    error::InterpErr,
     token::{kinds::TokenKind, Token},
 };
 
@@ -50,7 +50,7 @@ impl Lexer {
         }
     }
 
-    pub fn tokenized(&mut self) -> Result<Iter<'_, Token>, SyntaxError> {
+    pub fn tokenized(&mut self) -> Result<Iter<'_, Token>, InterpErr> {
         while !self.finished() {
             self.start = self.current;
 
@@ -62,7 +62,7 @@ impl Lexer {
         Ok(self.tokens.iter())
     }
 
-    fn process_next(&mut self) -> Result<(), SyntaxError> {
+    fn process_next(&mut self) -> Result<(), InterpErr> {
         let c = self.next_char();
 
         match c {
@@ -166,15 +166,15 @@ impl Lexer {
                 self.line += 1;
                 Ok(())
             }
-            c => Err(SyntaxError::new(
-                self.line,
-                "Unexpected character",
-                &format!("{c}"),
-            )),
+            c => Err(InterpErr::SyntaxError {
+                line: self.line,
+                msg: "Unexpected character".to_string(),
+                place: format!("{c}"),
+            }),
         }
     }
 
-    fn identifier(&mut self) -> Result<(), SyntaxError> {
+    fn identifier(&mut self) -> Result<(), InterpErr> {
         while self.peek().is_alphanumeric() {
             self.next_char();
         }
@@ -193,7 +193,7 @@ impl Lexer {
         }
     }
 
-    fn number(&mut self) -> Result<(), SyntaxError> {
+    fn number(&mut self) -> Result<(), InterpErr> {
         while self.peek().is_numeric() {
             self.next_char();
         }
@@ -211,7 +211,7 @@ impl Lexer {
         Ok(())
     }
 
-    fn string(&mut self) -> Result<(), SyntaxError> {
+    fn string(&mut self) -> Result<(), InterpErr> {
         while self.peek() != '"' && !self.finished() {
             if self.peek() == '\n' {
                 self.line += 1
@@ -220,7 +220,11 @@ impl Lexer {
         }
 
         if self.finished() {
-            return Err(SyntaxError::new(self.line, "Unterminated string", ""));
+            return Err(InterpErr::SyntaxError {
+                line: self.line,
+                msg: "Unterminated string".to_string(),
+                place: "".to_string(),
+            });
         }
 
         self.next_char();

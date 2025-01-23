@@ -4,7 +4,6 @@ pub mod kinds;
 
 // Token = lexeme + some information
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct Token {
     pub kind: TokenKind, //type of the token
     pub lexeme: String,  //substring representation of the token

@@ -1,30 +1,29 @@
 use crate::ast::{Binary, Expr, Literal, Unary};
-use crate::error::SyntaxError;
+use crate::error::InterpErr;
+use crate::error::InterpErr as Ie;
 use crate::token::kinds::TokenKind;
 use crate::token::kinds::TokenKind as Tk;
 use crate::token::Token;
 
-#[allow(dead_code)]
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
 }
 
-#[allow(dead_code)]
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Expr, SyntaxError> {
+    pub fn parse(&mut self) -> Result<Expr, InterpErr> {
         self.expression()
     }
 
-    fn expression(&mut self) -> Result<Expr, SyntaxError> {
+    fn expression(&mut self) -> Result<Expr, InterpErr> {
         self.equality()
     }
 
-    fn equality(&mut self) -> Result<Expr, SyntaxError> {
+    fn equality(&mut self) -> Result<Expr, InterpErr> {
         let mut expr = self.comparison()?;
 
         while let Tk::BangEqual | Tk::EqualEqual = self.peek().kind {
@@ -37,7 +36,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> Result<Expr, SyntaxError> {
+    fn comparison(&mut self) -> Result<Expr, InterpErr> {
         let mut expr = self.term()?;
 
         while let Tk::Greater | Tk::GreaterEqual | Tk::Less | Tk::LessEqual = self.peek().kind {
@@ -50,7 +49,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn term(&mut self) -> Result<Expr, SyntaxError> {
+    fn term(&mut self) -> Result<Expr, InterpErr> {
         let mut expr = self.factor()?;
 
         while let Tk::Minus | Tk::Plus = self.peek().kind {
@@ -63,7 +62,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn factor(&mut self) -> Result<Expr, SyntaxError> {
+    fn factor(&mut self) -> Result<Expr, InterpErr> {
         let mut expr = self.unary()?;
 
         while let Tk::Slash | Tk::Star = self.peek().kind {
@@ -76,7 +75,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn unary(&mut self) -> Result<Expr, SyntaxError> {
+    fn unary(&mut self) -> Result<Expr, InterpErr> {
         while let Tk::Bang | Tk::Minus = self.peek().kind {
             let operator = self.previous().clone();
             let right = Box::new(self.unary()?.clone());
@@ -86,7 +85,7 @@ impl Parser {
         self.primary()
     }
 
-    fn primary(&mut self) -> Result<Expr, SyntaxError> {
+    fn primary(&mut self) -> Result<Expr, InterpErr> {
         match self.peek().clone().kind {
             TokenKind::False => {
                 self.next_token();
@@ -114,11 +113,11 @@ impl Parser {
                 self.expect(Tk::RightParen, "Expected ')' after expression")?;
                 Ok(Expr::Grouping(expr))
             }
-            _ => Err(SyntaxError::new(
-                self.peek().line,
-                "Expected Expression",
-                &self.peek().lexeme,
-            )),
+            _ => Err(Ie::SyntaxError {
+                line: self.peek().line,
+                msg: "Expected Expression".to_string(),
+                place: self.peek().lexeme.clone(),
+            }),
         }
     }
 
@@ -144,13 +143,17 @@ impl Parser {
         }
     }
 
-    fn expect(&mut self, kind: TokenKind, msg: &str) -> Result<(), SyntaxError> {
+    fn expect(&mut self, kind: TokenKind, msg: &str) -> Result<(), InterpErr> {
         if kind == self.peek().kind {
             self.next_token();
             return Ok(());
         }
 
-        Err(SyntaxError::new(self.peek().line, msg, &self.peek().lexeme))
+        Err(Ie::SyntaxError {
+            line: self.peek().line,
+            msg: msg.to_string(),
+            place: self.peek().lexeme.clone(),
+        })
     }
 
     fn peek(&self) -> &Token {
