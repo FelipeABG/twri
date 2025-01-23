@@ -25,7 +25,7 @@ impl Display for SyntaxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "> {} [line {}] Error: {} '{}'",
+            "> {} [line {}] Error: {} at '{}'",
             std::any::type_name::<Self>().split("::").last().unwrap(),
             self.line,
             self.msg,
