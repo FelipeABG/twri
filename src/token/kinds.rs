@@ -45,4 +45,6 @@ pub enum TokenKind {
     True,
     Var,
     While,
+
+    Eof,
 }

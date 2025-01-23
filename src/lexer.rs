@@ -57,6 +57,8 @@ impl Lexer {
             self.process_next()?
         }
 
+        self.tokens
+            .push(Token::new(TokenKind::Eof, "".to_string(), self.line));
         Ok(self.tokens.iter())
     }
 

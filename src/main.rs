@@ -1,4 +1,4 @@
-use interp::{error::SyntaxError, lexer::Lexer};
+use interp::{error::SyntaxError, lexer::Lexer, parser::Parser};
 use std::io::Write;
 
 struct Args {
@@ -64,11 +64,9 @@ fn run_file(path: &str) -> Result<(), SyntaxError> {
 }
 
 fn run(source: &str) -> Result<(), SyntaxError> {
-    let mut lex = Lexer::new(source.to_string());
-
-    for token in lex.tokenized()? {
-        println!("{token:?}")
-    }
+    let mut lexer = Lexer::new(source.to_string());
+    let mut parser = Parser::new(lexer.tokenized()?.map(|t| t.clone()).collect());
+    println!("{:#?}", parser.parse()?);
 
     Ok(())
 }

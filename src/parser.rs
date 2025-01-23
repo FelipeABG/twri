@@ -16,6 +16,10 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
+    pub fn parse(&mut self) -> Result<Expr, SyntaxError> {
+        self.expression()
+    }
+
     fn expression(&mut self) -> Result<Expr, SyntaxError> {
         self.equality()
     }
@@ -118,6 +122,28 @@ impl Parser {
         }
     }
 
+    fn synchronize(&mut self) {
+        self.next_token();
+
+        while !self.finished() {
+            if let Tk::Semicolon = self.previous().kind {
+                return;
+            }
+
+            match self.peek().kind {
+                Tk::Class
+                | Tk::Fn
+                | Tk::Var
+                | Tk::For
+                | Tk::If
+                | Tk::While
+                | Tk::Print
+                | Tk::Return => return,
+                _ => self.next_token(),
+            };
+        }
+    }
+
     fn consume(&mut self, kind: TokenKind, msg: &str) -> Result<(), SyntaxError> {
         if kind == self.peek().kind {
             self.next_token();
@@ -136,7 +162,7 @@ impl Parser {
     }
 
     fn finished(&self) -> bool {
-        return self.current >= self.tokens.len();
+        self.tokens[self.current].kind == Tk::Eof
     }
 
     fn next_token(&mut self) -> &Token {
