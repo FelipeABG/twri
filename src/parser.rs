@@ -111,7 +111,7 @@ impl Parser {
             TokenKind::LeftParen => {
                 self.next_token();
                 let expr = Box::new(self.expression()?);
-                self.consume(Tk::RightParen, "Expected ')' after expression")?;
+                self.expect(Tk::RightParen, "Expected ')' after expression")?;
                 Ok(Expr::Grouping(expr))
             }
             _ => Err(SyntaxError::new(
@@ -144,7 +144,7 @@ impl Parser {
         }
     }
 
-    fn consume(&mut self, kind: TokenKind, msg: &str) -> Result<(), SyntaxError> {
+    fn expect(&mut self, kind: TokenKind, msg: &str) -> Result<(), SyntaxError> {
         if kind == self.peek().kind {
             self.next_token();
             return Ok(());

@@ -46,3 +46,5 @@ impl Debug for SyntaxError {
         )
     }
 }
+
+pub struct RuntimeError {}
