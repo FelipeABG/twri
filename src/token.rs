@@ -57,7 +57,7 @@ pub enum TokenKind {
     Super,
     This,
     True,
-    Var,
+    Let,
     While,
 
     Eof,

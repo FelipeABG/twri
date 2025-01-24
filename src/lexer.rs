@@ -37,7 +37,7 @@ impl Lexer {
         keywords.insert("super".into(), TokenKind::Super);
         keywords.insert("this".into(), TokenKind::This);
         keywords.insert("true".into(), TokenKind::True);
-        keywords.insert("var".into(), TokenKind::Var);
+        keywords.insert("let".into(), TokenKind::Let);
         keywords.insert("while".into(), TokenKind::While);
 
         Self {

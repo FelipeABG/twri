@@ -132,7 +132,7 @@ impl Parser {
             match self.peek().kind {
                 Tk::Class
                 | Tk::Fn
-                | Tk::Var
+                | Tk::Let
                 | Tk::For
                 | Tk::If
                 | Tk::While
