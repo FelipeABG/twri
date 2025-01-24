@@ -10,5 +10,5 @@ define! {
 
     struct unary -> operator(Token), right(Box<Expr>);
     struct binary -> left(Box<Expr>), operator(Token), right(Box<Expr>);
-    enum literal -> str(String) | number(f64) | True | False | nil;
+    enum literal -> str(String) | number(f64) | bool(bool) | null;
 }

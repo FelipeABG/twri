@@ -1,5 +1,5 @@
 // Token = lexeme + some information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub kind: TokenKind, //type of the token
     pub lexeme: String,  //substring representation of the token
@@ -50,7 +50,7 @@ pub enum TokenKind {
     Fn,
     For,
     If,
-    Nil,
+    Null,
     Or,
     Print,
     Return,

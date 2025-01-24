@@ -31,7 +31,7 @@ impl Lexer {
         keywords.insert("fn".into(), TokenKind::Fn);
         keywords.insert("for".into(), TokenKind::For);
         keywords.insert("if".into(), TokenKind::If);
-        keywords.insert("nil".into(), TokenKind::Nil);
+        keywords.insert("null".into(), TokenKind::Null);
         keywords.insert("or".into(), TokenKind::Print);
         keywords.insert("return".into(), TokenKind::Return);
         keywords.insert("super".into(), TokenKind::Super);

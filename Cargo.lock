@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "define-macro"
 version = "0.1.0"
-source = "git+https://github.com/FelipeABG/define-macro#0b6fb492d5f8096a9dae83a49eaaffe481cd8262"
+source = "git+https://github.com/FelipeABG/define-macro#5e0d4ef7557b7e7ad84ab2f12b7b1b7bd44c1629"
 dependencies = [
  "proc-macro2",
  "quote",

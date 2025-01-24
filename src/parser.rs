@@ -77,7 +77,7 @@ impl Parser {
 
     fn unary(&mut self) -> Result<Expr, InterpErr> {
         while let Tk::Bang | Tk::Minus = self.peek().kind {
-            let operator = self.previous().clone();
+            let operator = self.next_token().clone();
             let right = Box::new(self.unary()?.clone());
             return Ok(Expr::Unary(Unary::new(operator, right)));
         }
@@ -89,15 +89,15 @@ impl Parser {
         match self.peek().clone().kind {
             TokenKind::False => {
                 self.next_token();
-                Ok(Expr::Lit(Literal::False))
+                Ok(Expr::Lit(Literal::Bool(false)))
             }
             TokenKind::True => {
                 self.next_token();
-                Ok(Expr::Lit(Literal::True))
+                Ok(Expr::Lit(Literal::Bool(true)))
             }
-            TokenKind::Nil => {
+            TokenKind::Null => {
                 self.next_token();
-                Ok(Expr::Lit(Literal::Nil))
+                Ok(Expr::Lit(Literal::Null))
             }
             TokenKind::Number(n) => {
                 self.next_token();

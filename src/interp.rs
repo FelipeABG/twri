@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::fmt::Display;
 
 use crate::{
     ast::{Binary, Expr, Literal, Unary},
@@ -7,176 +7,143 @@ use crate::{
     token::TokenKind as Tk,
 };
 
+// Literals are a bit of syntax that produces a value. They exist in the source code.
+// Values dont exist in the source code, they are computed in the interprerter.
+type Value = Literal;
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let msg = match self {
+            Literal::Str(s) => format!("{s}"),
+            Literal::Number(n) => format!("{n}"),
+            Literal::Null => format!("null"),
+            Literal::Bool(b) => format!("{b}"),
+        };
+        write!(f, "{msg}")
+    }
+}
+
 pub struct Interpreter {}
 
 impl Interpreter {
-    pub fn interpret(expr: Expr) -> Result<(), InterpErr> {
-        match Self::evaluate(expr) {
-            Ok(value) => {
-                if let Some(value) = value.downcast_ref::<f64>() {
-                    println!("{}", value);
-                } else if let Some(value) = value.downcast_ref::<String>() {
-                    println!("{}", value);
-                } else if let Some(value) = value.downcast_ref::<bool>() {
-                    println!("{}", value);
-                } else if let Some(_) = value.downcast_ref::<()>() {
-                    println!("nil");
-                }
-
-                Ok(())
+    pub fn interpret(e: Expr) -> Result<Value, InterpErr> {
+        match evaluate(e) {
+            Ok(e) => {
+                println!("{e}");
+                Ok(e)
             }
             Err(e) => Err(e),
         }
     }
+}
 
-    fn evaluate(expr: Expr) -> Result<Box<dyn Any>, InterpErr> {
-        match expr {
-            Expr::Unary(unary) => evaluate_unary(unary),
-            Expr::Binary(binary) => evaluate_binary(binary),
-            Expr::Grouping(expr) => evaluate_grouping(*expr),
-            Expr::Lit(literal) => evaluate_literal(literal),
-        }
+fn evaluate(e: Expr) -> Result<Value, InterpErr> {
+    match e {
+        Expr::Unary(unary) => unary_eval(unary),
+        Expr::Binary(binary) => binary_eval(binary),
+        Expr::Grouping(expr) => evaluate(*expr),
+        Expr::Lit(literal) => Ok(literal),
     }
 }
 
-fn evaluate_unary(u: Unary) -> Result<Box<dyn Any>, InterpErr> {
-    let expr = Interpreter::evaluate(*u.right)?;
-    match u.operator.kind {
-        Tk::Bang => match expr.downcast::<bool>() {
-            Ok(value) => Ok(Box::new(!*value)),
-            Err(_) => Err(Ie::RuntimeError {
-                line: u.operator.line,
-                msg: "Operand must be a number".to_string(),
-            }),
-        },
-        Tk::Minus => match expr.downcast::<f64>() {
-            Ok(value) => Ok(Box::new(-*value)),
-            Err(_) => Err(Ie::RuntimeError {
-                line: u.operator.line,
-                msg: "Operand must be a number".to_string(),
-            }),
-        },
-        _ => Err(Ie::RuntimeError {
-            line: u.operator.line,
-            msg: "Invalid operator. Valid ones are '-' and '!'".to_string(),
-        }),
-    }
-}
-
-fn evaluate_binary(b: Binary) -> Result<Box<dyn Any>, InterpErr> {
-    let left = Interpreter::evaluate(*b.left)?;
-    let right = Interpreter::evaluate(*b.right)?;
+fn binary_eval(b: Binary) -> Result<Value, InterpErr> {
+    let left = evaluate(*b.left)?;
+    let right = evaluate(*b.right)?;
 
     match b.operator.kind {
-        Tk::Minus => Ok(Box::new(
-            value_ref::<f64>(&left)? - value_ref::<f64>(&right)?,
-        )),
-        Tk::Slash => Ok(Box::new(
-            value_ref::<f64>(&left)? - value_ref::<f64>(&right)?,
-        )),
-        Tk::Star => Ok(Box::new(
-            value_ref::<f64>(&left)? * value_ref::<f64>(&right)?,
-        )),
-        Tk::Greater => Ok(Box::new(
-            value_ref::<f64>(&left)? > value_ref::<f64>(&right)?,
-        )),
-        Tk::GreaterEqual => Ok(Box::new(
-            value_ref::<f64>(&left)? >= value_ref::<f64>(&right)?,
-        )),
-        Tk::Less => Ok(Box::new(
-            value_ref::<f64>(&left)? < value_ref::<f64>(&right)?,
-        )),
-        Tk::LessEqual => Ok(Box::new(
-            value_ref::<f64>(&left)? <= value_ref::<f64>(&right)?,
-        )),
-        Tk::EqualEqual => {
-            if is_same_type(&*left, &*right) {
-                if let Ok(vl) = value_ref::<f64>(&left) {
-                    let vr = value_ref::<f64>(&right)?;
-                    return Ok(Box::new(vl == vr));
-                }
-                if let Ok(vl) = value_ref::<bool>(&left) {
-                    let vr = value_ref::<bool>(&right)?;
-                    return Ok(Box::new(vl == vr));
-                }
-                if let Ok(vl) = value_ref::<String>(&left) {
-                    let vr = value_ref::<String>(&right)?;
-                    return Ok(Box::new(vl == vr));
-                }
-                if let Ok(vl) = value_ref::<()>(&left) {
-                    let vr = value_ref::<()>(&right)?;
-                    return Ok(Box::new(vl == vr));
-                }
+        Tk::Minus => {
+            if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
+                return Ok(Value::Number(l - r));
             }
 
-            Err(InterpErr::RuntimeError {
-                line: b.operator.line,
-                msg: "Cannot compare values of different types".to_string(),
-            })
+            rt_error(b.operator.line, "Operands must be number")
         }
-        Tk::BangEqual => {
-            if is_same_type(&*left, &*right) {
-                if let Ok(vl) = value_ref::<f64>(&left) {
-                    let vr = value_ref::<f64>(&right)?;
-                    return Ok(Box::new(vl != vr));
-                }
+        Tk::Slash => {
+            if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
+                return Ok(Value::Number(l / r));
             }
 
-            Err(InterpErr::RuntimeError {
-                line: b.operator.line,
-                msg: "Cannot compare values of different types".to_string(),
-            })
+            rt_error(b.operator.line, "Operands must be number")
+        }
+        Tk::Star => {
+            if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
+                return Ok(Value::Number(l * r));
+            }
+
+            rt_error(b.operator.line, "Operands must be number")
         }
         Tk::Plus => {
-            if left.is::<String>() && right.is::<String>() {
-                return Ok(Box::new(
-                    value_ref::<String>(&left)?.to_string() + value_ref::<String>(&right)?,
-                ));
+            if let (Literal::Number(l), Literal::Number(r)) = (left.clone(), right.clone()) {
+                return Ok(Value::Number(l + r));
             }
 
-            if left.is::<f64>() && right.is::<f64>() {
-                return Ok(Box::new(
-                    value_ref::<f64>(&left)? + value_ref::<f64>(&right)?,
-                ));
+            if let (Literal::Str(l), Literal::Str(r)) = (left, right) {
+                return Ok(Value::Str(l + &r));
             }
 
-            Err(InterpErr::RuntimeError {
-                line: b.operator.line,
-                msg: "'+' operation require two operands of the same type ('str' or 'number')"
-                    .to_string(),
-            })
+            rt_error(b.operator.line, "Operand must be 'string' or 'number'")
         }
-        _ => Err(InterpErr::RuntimeError {
-            line: b.operator.line,
-            msg: "Invalid operator.".to_string(),
-        }),
+        Tk::Greater => {
+            if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
+                return Ok(Value::Bool(l > r));
+            }
+
+            rt_error(b.operator.line, "Operands must be number")
+        }
+        Tk::GreaterEqual => {
+            if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
+                return Ok(Value::Bool(l >= r));
+            }
+
+            rt_error(b.operator.line, "Operands must be number")
+        }
+        Tk::Less => {
+            if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
+                return Ok(Value::Bool(l < r));
+            }
+
+            rt_error(b.operator.line, "Operands must be number")
+        }
+        Tk::LessEqual => {
+            if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
+                return Ok(Value::Bool(l <= r));
+            }
+
+            rt_error(b.operator.line, "Operands must be number")
+        }
+        Tk::BangEqual => Ok(Value::Bool(left != right)),
+        Tk::EqualEqual => Ok(Value::Bool(left == right)),
+        _ => rt_error(b.operator.line, "Invalid operator"),
     }
 }
 
-fn evaluate_grouping(expr: Expr) -> Result<Box<dyn Any>, InterpErr> {
-    Interpreter::evaluate(expr)
-}
+fn unary_eval(u: Unary) -> Result<Value, InterpErr> {
+    let right = evaluate(*u.right)?;
 
-fn evaluate_literal(expr: Literal) -> Result<Box<dyn Any>, InterpErr> {
-    match expr {
-        Literal::Str(s) => Ok(Box::new(s)),
-        Literal::Number(n) => Ok(Box::new(n)),
-        Literal::True => Ok(Box::new(true)),
-        Literal::False => Ok(Box::new(false)),
-        Literal::Nil => Ok(Box::new(())),
+    match u.operator.kind {
+        Tk::Bang => Ok(Value::Bool(!truthy(right))),
+        Tk::Minus => {
+            if let Literal::Number(n) = right {
+                return Ok(Value::Number(-n));
+            }
+
+            rt_error(u.operator.line, "Operand must be a number")
+        }
+        _ => rt_error(u.operator.line, "Ivalid operator"),
     }
 }
 
-fn value_ref<T: Any>(value: &Box<dyn Any>) -> Result<&T, InterpErr> {
-    match value.downcast_ref::<T>() {
-        Some(v) => Ok(v),
-        None => Err(Ie::RuntimeError {
-            line: 000,
-            msg: "Invalid type".to_string(),
-        }),
-    }
+fn rt_error(line: usize, msg: &str) -> Result<Value, InterpErr> {
+    Err(Ie::RuntimeError {
+        line,
+        msg: msg.to_string(),
+    })
 }
 
-fn is_same_type(o1: &dyn Any, o2: &dyn Any) -> bool {
-    o1.type_id() == o2.type_id()
+fn truthy(v: Literal) -> bool {
+    match v {
+        Literal::Bool(b) => b,
+        Literal::Null => false,
+        _ => true,
+    }
 }
