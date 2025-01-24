@@ -1,22 +1,10 @@
 use interp::{error::InterpErr, interp::Interpreter, lexer::Lexer, parser::Parser};
 use std::io::Write;
 
-struct Args {
-    commands: Vec<String>,
-}
-
-impl Args {
-    fn parse() -> Self {
-        Self {
-            commands: std::env::args().collect(),
-        }
-    }
-}
-
 fn main() {
-    let args = Args::parse();
+    let args: Vec<_> = std::env::args().collect();
 
-    match args.commands.len() {
+    match args.len() {
         1 => {
             if let Err(e) = run_prompt() {
                 eprintln!("{e}");
@@ -24,7 +12,7 @@ fn main() {
             }
         }
         2 => {
-            if let Err(e) = run_file(&args.commands[1]) {
+            if let Err(e) = run_file(&args[1]) {
                 eprintln!("{e}");
                 std::process::exit(65)
             }
@@ -53,7 +41,7 @@ fn run_prompt() -> Result<(), InterpErr> {
 
         match run(&input) {
             Ok(_) => continue,
-            Err(e) => eprintln!(">{e}"),
+            Err(e) => eprintln!("> {e}"),
         }
     }
 }

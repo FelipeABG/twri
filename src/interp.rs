@@ -4,7 +4,7 @@ use crate::{
     ast::{Binary, Expr, Literal, Unary},
     error::InterpErr,
     error::InterpErr as Ie,
-    token::kinds::TokenKind as Tk,
+    token::TokenKind as Tk,
 };
 
 pub struct Interpreter {}
@@ -142,7 +142,7 @@ fn evaluate_binary(b: Binary) -> Result<Box<dyn Any>, InterpErr> {
 
             Err(InterpErr::RuntimeError {
                 line: b.operator.line,
-                msg: "'+' operation require two two operands of the same type ('str' or 'number')"
+                msg: "'+' operation require two operands of the same type ('str' or 'number')"
                     .to_string(),
             })
         }

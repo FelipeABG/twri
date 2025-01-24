@@ -2,7 +2,7 @@ use std::{collections::HashMap, slice::Iter};
 
 use crate::{
     error::InterpErr,
-    token::{kinds::TokenKind, Token},
+    token::{Token, TokenKind},
 };
 
 // MENTAL MODEL:

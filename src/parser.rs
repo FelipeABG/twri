@@ -1,9 +1,9 @@
 use crate::ast::{Binary, Expr, Literal, Unary};
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
-use crate::token::kinds::TokenKind;
-use crate::token::kinds::TokenKind as Tk;
 use crate::token::Token;
+use crate::token::TokenKind as Tk;
+use crate::token::TokenKind;
 
 pub struct Parser {
     tokens: Vec<Token>,
