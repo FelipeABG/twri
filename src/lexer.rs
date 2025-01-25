@@ -50,7 +50,7 @@ impl Lexer {
         }
     }
 
-    pub fn tokenized(&mut self) -> Result<Iter<'_, Token>, InterpErr> {
+    pub fn tokenized(&mut self) -> Result<Vec<Token>, InterpErr> {
         while !self.finished() {
             self.start = self.current;
 
@@ -59,7 +59,7 @@ impl Lexer {
 
         self.tokens
             .push(Token::new(TokenKind::Eof, "".to_string(), self.line));
-        Ok(self.tokens.iter())
+        Ok(self.tokens.clone())
     }
 
     fn process_next(&mut self) -> Result<(), InterpErr> {

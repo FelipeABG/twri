@@ -53,8 +53,10 @@ fn run_file(path: &str) -> Result<(), InterpErr> {
 
 fn run(source: &str) -> Result<(), InterpErr> {
     let mut lexer = Lexer::new(source.to_string());
-    let mut parser = Parser::new(lexer.tokenized()?.map(|t| t.clone()).collect());
-    Interpreter::interpret(parser.parse()?)?;
+    let tokens = lexer.tokenized()?;
+    let mut parser = Parser::new(tokens);
+    let ast = parser.parse()?;
+    Interpreter::interpret(ast)?;
 
     Ok(())
 }

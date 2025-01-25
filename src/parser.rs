@@ -15,6 +15,8 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
+    // A program is a list of statements. So parsing the list of tokens
+    // is generating a list os statements
     pub fn parse(&mut self) -> Result<Vec<Stmt>, InterpErr> {
         let mut statements = Vec::new();
 
