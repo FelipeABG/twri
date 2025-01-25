@@ -1,4 +1,4 @@
-use crate::ast::{Binary, Expr, Literal, Unary};
+use crate::ast::{Binary, Expr, ExprStmt, Literal, PrintStmt, Stmt, Unary};
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
 use crate::token::Token;
@@ -15,8 +15,35 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Expr, InterpErr> {
-        self.expression()
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, InterpErr> {
+        let mut statements = Vec::new();
+
+        while !self.finished() {
+            statements.push(self.statement()?);
+        }
+
+        Ok(statements)
+    }
+
+    fn statement(&mut self) -> Result<Stmt, InterpErr> {
+        if let Tk::Print = self.peek().kind {
+            //Consumes the 'print' token
+            let _ = self.next_token();
+            return self.print_statement();
+        }
+        self.expr_statement()
+    }
+
+    fn print_statement(&mut self) -> Result<Stmt, InterpErr> {
+        let expr = self.expression()?;
+        self.expect(Tk::Semicolon, "Expect ';' after value")?;
+        Ok(Stmt::PrintStmt(PrintStmt::new(expr)))
+    }
+
+    fn expr_statement(&mut self) -> Result<Stmt, InterpErr> {
+        let expr = self.expression()?;
+        self.expect(Tk::Semicolon, "Expect ';' after expression")?;
+        Ok(Stmt::ExprStmt(ExprStmt::new(expr)))
     }
 
     fn expression(&mut self) -> Result<Expr, InterpErr> {

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    ast::{Binary, Expr, Literal, Unary},
+    ast::{Binary, Expr, ExprStmt, Literal, PrintStmt, Stmt, Unary},
     error::InterpErr,
     error::InterpErr as Ie,
     token::TokenKind as Tk,
@@ -26,15 +26,29 @@ impl Display for Value {
 pub struct Interpreter {}
 
 impl Interpreter {
-    pub fn interpret(e: Expr) -> Result<Value, InterpErr> {
-        match evaluate(e) {
-            Ok(e) => {
-                println!("{e}");
-                Ok(e)
-            }
-            Err(e) => Err(e),
-        }
+    pub fn interpret(stmts: Vec<Stmt>) -> Result<(), InterpErr> {
+        Ok(for stmt in stmts {
+            execute(stmt)?
+        })
     }
+}
+
+fn execute(s: Stmt) -> Result<(), InterpErr> {
+    match s {
+        Stmt::ExprStmt(expr_stmt) => expr_stmt_exec(expr_stmt),
+        Stmt::PrintStmt(print_stmt) => print_stmt_exec(print_stmt),
+    }
+}
+
+fn print_stmt_exec(ps: PrintStmt) -> Result<(), InterpErr> {
+    let value = evaluate(ps.expr)?;
+    println!("{value}");
+    Ok(())
+}
+
+fn expr_stmt_exec(es: ExprStmt) -> Result<(), InterpErr> {
+    evaluate(es.expr)?;
+    Ok(())
 }
 
 fn evaluate(e: Expr) -> Result<Value, InterpErr> {
