@@ -4,14 +4,18 @@ use crate::token::Token;
 
 define! {
     enum stmt ->  exprStmt(ExprStmt)
-                | printStmt(PrintStmt);
+                | printStmt(PrintStmt)
+                | letStmt(LetStmt);
 
     struct exprStmt -> expr(Expr);
     struct printStmt -> expr(Expr);
+    struct letStmt -> ident(Token), initializer(Option<Expr>);
+
     enum expr ->  unary(Unary)
                 | binary(Binary)
                 | grouping(Box<Expr>)
-                | lit(Literal);
+                | lit(Literal)
+                | var(Token);
 
     struct unary -> operator(Token), right(Box<Expr>);
     struct binary -> left(Box<Expr>), operator(Token), right(Box<Expr>);

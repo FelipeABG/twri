@@ -1,4 +1,4 @@
-use crate::ast::{Binary, Expr, ExprStmt, Literal, PrintStmt, Stmt, Unary};
+use crate::ast::{Binary, Expr, ExprStmt, LetStmt, Literal, PrintStmt, Stmt, Unary};
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
 use crate::token::Token;
@@ -21,16 +21,47 @@ impl Parser {
         let mut statements = Vec::new();
 
         while !self.finished() {
-            statements.push(self.statement()?);
+            statements.push(self.declaration()?);
         }
 
         Ok(statements)
     }
 
+    // Declarations are statements that declare names (variables, functions, classes)
+    fn declaration(&mut self) -> Result<Stmt, InterpErr> {
+        if let Tk::Let = self.peek().kind {
+            //Consumes the 'let' keyword
+            self.next_token();
+            return self.let_declaration();
+        }
+
+        self.statement()
+    }
+
+    fn let_declaration(&mut self) -> Result<Stmt, InterpErr> {
+        let ident = self.next_token().clone();
+        match ident.kind {
+            Tk::Identifier => {
+                let mut init = None;
+                if let Tk::Equal = self.peek().kind {
+                    // Consumes the '=' token
+                    self.next_token();
+                    init = Some(self.expression()?);
+                }
+                self.expect(Tk::Semicolon, "Expect ';' after declaration")?;
+                Ok(Stmt::LetStmt(LetStmt::new(ident, init)))
+            }
+            _ => Err(InterpErr::RuntimeError {
+                line: ident.line,
+                msg: "Expected identifier".to_string(),
+            }),
+        }
+    }
+
     fn statement(&mut self) -> Result<Stmt, InterpErr> {
         if let Tk::Print = self.peek().kind {
             //Consumes the 'print' token
-            let _ = self.next_token();
+            self.next_token();
             return self.print_statement();
         }
         self.expr_statement()
@@ -142,33 +173,12 @@ impl Parser {
                 self.expect(Tk::RightParen, "Expected ')' after expression")?;
                 Ok(Expr::Grouping(expr))
             }
+            TokenKind::Identifier => Ok(Expr::Var(self.next_token().clone())),
             _ => Err(Ie::SyntaxError {
                 line: self.peek().line,
                 msg: "Expected Expression".to_string(),
                 place: self.peek().lexeme.clone(),
             }),
-        }
-    }
-
-    fn synchronize(&mut self) {
-        self.next_token();
-
-        while !self.finished() {
-            if let Tk::Semicolon = self.previous().kind {
-                return;
-            }
-
-            match self.peek().kind {
-                Tk::Class
-                | Tk::Fn
-                | Tk::Let
-                | Tk::For
-                | Tk::If
-                | Tk::While
-                | Tk::Print
-                | Tk::Return => return,
-                _ => self.next_token(),
-            };
         }
     }
 
