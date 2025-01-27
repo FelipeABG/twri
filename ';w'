@@ -3,17 +3,17 @@ use std::io::Write;
 
 fn main() {
     let args: Vec<_> = std::env::args().collect();
-    let mut interp = Interpreter::new();
+    let interp = Interpreter::new();
 
     match args.len() {
         1 => {
-            if let Err(e) = repl(&mut interp) {
+            if let Err(e) = repl() {
                 eprintln!("{e}");
                 std::process::exit(65)
             }
         }
         2 => {
-            if let Err(e) = run_file(&args[1], &mut interp) {
+            if let Err(e) = run_file(&args[1]) {
                 eprintln!("{e}");
                 std::process::exit(65)
             }
@@ -25,7 +25,7 @@ fn main() {
     }
 }
 
-fn repl(interp: &mut Interpreter) -> Result<(), InterpErr> {
+fn repl() -> Result<(), InterpErr> {
     let mut input = String::new();
     let stdin = std::io::stdin();
 
@@ -40,23 +40,24 @@ fn repl(interp: &mut Interpreter) -> Result<(), InterpErr> {
             return Ok(());
         }
 
-        match run(&input, interp) {
+        match run(&input) {
             Ok(_) => continue,
             Err(e) => eprintln!("> {e}"),
         }
     }
 }
 
-fn run_file(path: &str, interp: &mut Interpreter) -> Result<(), InterpErr> {
+fn run_file(path: &str) -> Result<(), InterpErr> {
     let f = std::fs::read(path).unwrap();
-    run(&String::from_utf8(f).unwrap(), interp)
+    run(&String::from_utf8(f).unwrap())
 }
 
-fn run(source: &str, interp: &mut Interpreter) -> Result<(), InterpErr> {
+fn run(source: &str) -> Result<(), InterpErr> {
     let mut lexer = Lexer::new(source.to_string());
     let tokens = lexer.tokenized()?;
     let mut parser = Parser::new(tokens);
     let ast = parser.parse()?;
+    let mut interp = Interpreter::new();
     interp.interpret(ast)?;
     Ok(())
 }
