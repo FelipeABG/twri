@@ -31,7 +31,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         Self {
-            env: Environment::new(),
+            env: Environment::new(None),
         }
     }
 

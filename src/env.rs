@@ -6,12 +6,14 @@ type Value = Literal;
 
 pub struct Environment {
     variables: HashMap<String, Value>,
+    enclosing: Option<Box<Environment>>,
 }
 
 impl Environment {
-    pub fn new() -> Self {
+    pub fn new(enclosing: Option<Box<Environment>>) -> Self {
         Self {
             variables: HashMap::new(),
+            enclosing,
         }
     }
 
@@ -22,20 +24,32 @@ impl Environment {
     pub fn assign(&mut self, key: Token, value: Value) -> Result<Value, InterpErr> {
         match self.variables.get(&key.lexeme) {
             Some(_) => Ok(self.variables.insert(key.lexeme, value).unwrap()),
-            None => Err(InterpErr::RuntimeError {
-                line: key.line,
-                msg: fmt!("Undefined variable '{}'", key.lexeme),
-            }),
+            None => {
+                if let Some(e) = &mut self.enclosing {
+                    return e.assign(key, value);
+                }
+
+                Err(InterpErr::RuntimeError {
+                    line: key.line,
+                    msg: fmt!("Undefined variable '{}'", key.lexeme),
+                })
+            }
         }
     }
 
     pub fn get(&self, key: Token) -> Result<Value, InterpErr> {
         match self.variables.get(&key.lexeme) {
             Some(v) => Ok(v.clone()),
-            None => Err(InterpErr::RuntimeError {
-                line: key.line,
-                msg: fmt!("Undefined variable '{}'", key.lexeme),
-            }),
+            None => {
+                if let Some(e) = &self.enclosing {
+                    return e.get(key);
+                };
+
+                Err(InterpErr::RuntimeError {
+                    line: key.line,
+                    msg: fmt!("Undefined variable '{}'", key.lexeme),
+                })
+            }
         }
     }
 }
