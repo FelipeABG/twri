@@ -1,4 +1,4 @@
-use crate::ast::{Binary, Expr, ExprStmt, LetStmt, Literal, PrintStmt, Stmt, Unary};
+use crate::ast::{Assign, Binary, Expr, ExprStmt, LetStmt, Literal, PrintStmt, Stmt, Unary};
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
 use crate::token::Token;
@@ -80,7 +80,29 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, InterpErr> {
-        self.equality()
+        self.assign()
+    }
+
+    fn assign(&mut self) -> Result<Expr, InterpErr> {
+        let expr = self.equality()?;
+
+        if let Tk::Equal = self.peek().kind {
+            //consumens the '=' token
+            let equals = self.next_token().clone();
+            let value = self.assign()?;
+
+            if let Expr::Var(v) = expr {
+                let ident = v;
+                return Ok(Expr::Assign(Assign::new(ident, Box::new(value))));
+            }
+
+            return Err(Ie::RuntimeError {
+                line: equals.line,
+                msg: "Invalid assignment target.".to_string(),
+            });
+        }
+
+        Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Expr, InterpErr> {

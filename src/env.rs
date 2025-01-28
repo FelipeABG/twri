@@ -19,6 +19,16 @@ impl Environment {
         self.variables.insert(key, value);
     }
 
+    pub fn assign(&mut self, key: Token, value: Value) -> Result<Value, InterpErr> {
+        match self.variables.get(&key.lexeme) {
+            Some(_) => Ok(self.variables.insert(key.lexeme, value).unwrap()),
+            None => Err(InterpErr::RuntimeError {
+                line: key.line,
+                msg: fmt!("Undefined variable '{}'", key.lexeme),
+            }),
+        }
+    }
+
     pub fn get(&self, key: Token) -> Result<Value, InterpErr> {
         match self.variables.get(&key.lexeme) {
             Some(v) => Ok(v.clone()),

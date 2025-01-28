@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    ast::{Binary, Expr, ExprStmt, LetStmt, Literal, PrintStmt, Stmt, Unary},
+    ast::{Assign, Binary, Expr, ExprStmt, LetStmt, Literal, PrintStmt, Stmt, Unary},
     env::Environment,
     error::InterpErr,
     error::InterpErr as Ie,
@@ -63,19 +63,20 @@ impl Interpreter {
         Ok(())
     }
 
-    fn print_stmt_exec(&self, ps: PrintStmt) -> Result<(), InterpErr> {
+    fn print_stmt_exec(&mut self, ps: PrintStmt) -> Result<(), InterpErr> {
         let value = self.evaluate(ps.expr)?;
         println!("{value}");
         Ok(())
     }
 
-    fn expr_stmt_exec(&self, es: ExprStmt) -> Result<(), InterpErr> {
+    fn expr_stmt_exec(&mut self, es: ExprStmt) -> Result<(), InterpErr> {
         self.evaluate(es.expr)?;
         Ok(())
     }
 
-    fn evaluate(&self, e: Expr) -> Result<Value, InterpErr> {
+    fn evaluate(&mut self, e: Expr) -> Result<Value, InterpErr> {
         match e {
+            Expr::Assign(assign) => self.assign_eval(assign),
             Expr::Unary(unary) => self.unary_eval(unary),
             Expr::Binary(binary) => self.binary_eval(binary),
             Expr::Grouping(expr) => self.evaluate(*expr),
@@ -84,7 +85,13 @@ impl Interpreter {
         }
     }
 
-    fn binary_eval(&self, b: Binary) -> Result<Value, InterpErr> {
+    fn assign_eval(&mut self, a: Assign) -> Result<Value, InterpErr> {
+        let value = self.evaluate(*a.value)?;
+        self.env.assign(a.ident, value.clone())?;
+        Ok(value)
+    }
+
+    fn binary_eval(&mut self, b: Binary) -> Result<Value, InterpErr> {
         let left = self.evaluate(*b.left)?;
         let right = self.evaluate(*b.right)?;
 
@@ -155,7 +162,7 @@ impl Interpreter {
         }
     }
 
-    fn unary_eval(&self, u: Unary) -> Result<Value, InterpErr> {
+    fn unary_eval(&mut self, u: Unary) -> Result<Value, InterpErr> {
         let right = self.evaluate(*u.right)?;
 
         match u.operator.kind {
