@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    ast::{Assign, Binary, Expr, ExprStmt, LetStmt, Literal, PrintStmt, Stmt, Unary},
+    ast::{Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, PrintStmt, Stmt, Unary},
     env::Environment,
     error::InterpErr,
     error::InterpErr as Ie,
@@ -47,9 +47,25 @@ impl Interpreter {
             Stmt::PrintStmt(print_stmt) => self.print_stmt_exec(print_stmt),
             Stmt::LetStmt(let_stmt) => self.let_stmt_exec(let_stmt),
             Stmt::Block(block) => self.block_stmt_exec(block),
+            Stmt::IfStmt(if_stmt) => self.if_stmt_exec(if_stmt),
         }
     }
 
+    fn if_stmt_exec(&mut self, c: IfStmt) -> Result<(), InterpErr> {
+        let condition = truthy(self.evaluate(c.condition)?);
+
+        if condition {
+            self.execute(*c.if_branch)
+        } else {
+            match c.else_branch {
+                Some(branch) => self.execute(*branch),
+                None => Ok(()),
+            }
+        }
+    }
+
+    //sets the new env as the current one, executes
+    //all statements and then sets the env as the previos one again
     fn block_stmt_exec(&mut self, stmts: Vec<Stmt>) -> Result<(), InterpErr> {
         let previous = self.env.clone();
         let new = Environment::new(Some(Box::new(self.env.clone())));

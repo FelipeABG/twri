@@ -26,7 +26,7 @@ impl Lexer {
         let mut keywords = HashMap::new();
         keywords.insert("and".into(), TokenKind::And);
         keywords.insert("class".into(), TokenKind::Class);
-        keywords.insert("else".into(), TokenKind::Class);
+        keywords.insert("else".into(), TokenKind::Else);
         keywords.insert("false".into(), TokenKind::False);
         keywords.insert("fn".into(), TokenKind::Fn);
         keywords.insert("for".into(), TokenKind::For);

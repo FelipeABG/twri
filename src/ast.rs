@@ -6,8 +6,10 @@ define! {
     enum stmt ->  exprStmt(ExprStmt)
                 | printStmt(PrintStmt)
                 | letStmt(LetStmt)
-                | block(Vec<Stmt>);
+                | block(Vec<Stmt>)
+                | ifStmt(IfStmt);
 
+    struct ifStmt -> condition(Expr), if_branch(Box<Stmt>), else_branch(Option<Box<Stmt>>);
     struct exprStmt -> expr(Expr);
     struct printStmt -> expr(Expr);
     struct letStmt -> ident(Token), initializer(Option<Expr>);

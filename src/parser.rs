@@ -1,4 +1,6 @@
-use crate::ast::{Assign, Binary, Expr, ExprStmt, LetStmt, Literal, PrintStmt, Stmt, Unary};
+use crate::ast::{
+    Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, PrintStmt, Stmt, Unary,
+};
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
 use crate::token::Token;
@@ -68,13 +70,33 @@ impl Parser {
         if let Tk::LeftBrace = self.peek().kind {
             //consumes the '{' token;
             self.next_token();
-            return self.block();
+            return Ok(Stmt::Block(self.block()?));
+        }
+
+        if let Tk::If = self.peek().kind {
+            //consumes the 'if' token
+            self.next_token();
+            return self.if_statement();
         }
 
         self.expr_statement()
     }
 
-    fn block(&mut self) -> Result<Stmt, InterpErr> {
+    fn if_statement(&mut self) -> Result<Stmt, InterpErr> {
+        let condition = self.expression()?;
+        let if_branch = Box::new(self.statement()?);
+
+        let mut else_branch = None;
+        if let Tk::Else = self.peek().kind {
+            //consumes the 'else' token
+            self.next_token();
+            else_branch = Some(Box::new(self.statement()?))
+        }
+
+        Ok(Stmt::IfStmt(IfStmt::new(condition, if_branch, else_branch)))
+    }
+
+    fn block(&mut self) -> Result<Vec<Stmt>, InterpErr> {
         let mut stmts = Vec::new();
 
         while !matches!(self.peek().kind, Tk::RightBrace) && !self.finished() {
@@ -82,7 +104,7 @@ impl Parser {
         }
 
         self.expect(Tk::RightBrace, "Expected '}' at end of block")?;
-        Ok(Stmt::Block(stmts))
+        Ok(stmts)
     }
 
     fn print_statement(&mut self) -> Result<Stmt, InterpErr> {
