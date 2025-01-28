@@ -46,7 +46,21 @@ impl Interpreter {
             Stmt::ExprStmt(expr_stmt) => self.expr_stmt_exec(expr_stmt),
             Stmt::PrintStmt(print_stmt) => self.print_stmt_exec(print_stmt),
             Stmt::LetStmt(let_stmt) => self.let_stmt_exec(let_stmt),
+            Stmt::Block(block) => self.block_stmt_exec(block),
         }
+    }
+
+    fn block_stmt_exec(&mut self, stmts: Vec<Stmt>) -> Result<(), InterpErr> {
+        let previous = self.env.clone();
+        let new = Environment::new(Some(Box::new(self.env.clone())));
+        self.env = new;
+
+        for stmt in stmts {
+            self.execute(stmt)?;
+        }
+
+        self.env = previous;
+        Ok(())
     }
 
     fn let_stmt_exec(&mut self, l: LetStmt) -> Result<(), InterpErr> {

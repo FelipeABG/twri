@@ -64,7 +64,25 @@ impl Parser {
             self.next_token();
             return self.print_statement();
         }
+
+        if let Tk::LeftBrace = self.peek().kind {
+            //consumes the '{' token;
+            self.next_token();
+            return self.block();
+        }
+
         self.expr_statement()
+    }
+
+    fn block(&mut self) -> Result<Stmt, InterpErr> {
+        let mut stmts = Vec::new();
+
+        while !matches!(self.peek().kind, Tk::RightBrace) && !self.finished() {
+            stmts.push(self.declaration()?);
+        }
+
+        self.expect(Tk::RightBrace, "Expected '}' at end of block")?;
+        Ok(Stmt::Block(stmts))
     }
 
     fn print_statement(&mut self) -> Result<Stmt, InterpErr> {

@@ -5,7 +5,8 @@ use crate::token::Token;
 define! {
     enum stmt ->  exprStmt(ExprStmt)
                 | printStmt(PrintStmt)
-                | letStmt(LetStmt);
+                | letStmt(LetStmt)
+                | block(Vec<Stmt>);
 
     struct exprStmt -> expr(Expr);
     struct printStmt -> expr(Expr);

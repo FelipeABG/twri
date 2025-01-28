@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 type Value = Literal;
 
+#[derive(Clone)]
 pub struct Environment {
     variables: HashMap<String, Value>,
     enclosing: Option<Box<Environment>>,
