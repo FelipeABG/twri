@@ -19,10 +19,12 @@ define! {
                 | binary(Binary)
                 | grouping(Box<Expr>)
                 | lit(Literal)
+                | logical(Logical)
                 | var(Token);
 
     struct assign -> ident(Token), value(Box<Expr>);
     struct unary -> operator(Token), right(Box<Expr>);
     struct binary -> left(Box<Expr>), operator(Token), right(Box<Expr>);
+    struct logical -> left(Box<Expr>), operator(Token), right(Box<Expr>);
     enum literal -> str(String) | number(f64) | bool(bool) | null;
 }

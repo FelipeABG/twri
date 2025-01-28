@@ -1,7 +1,9 @@
 use std::fmt::Display;
 
 use crate::{
-    ast::{Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, PrintStmt, Stmt, Unary},
+    ast::{
+        Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt, Unary,
+    },
     env::Environment,
     error::InterpErr,
     error::InterpErr as Ie,
@@ -52,7 +54,7 @@ impl Interpreter {
     }
 
     fn if_stmt_exec(&mut self, c: IfStmt) -> Result<(), InterpErr> {
-        let condition = truthy(self.evaluate(c.condition)?);
+        let condition = truthy(&self.evaluate(c.condition)?);
 
         if condition {
             self.execute(*c.if_branch)
@@ -112,7 +114,24 @@ impl Interpreter {
             Expr::Grouping(expr) => self.evaluate(*expr),
             Expr::Var(v) => self.env.get(v),
             Expr::Lit(literal) => Ok(literal),
+            Expr::Logical(logical) => self.logical_eval(logical),
         }
+    }
+
+    fn logical_eval(&mut self, l: Logical) -> Result<Value, InterpErr> {
+        let left = self.evaluate(*l.left)?;
+
+        if let Tk::Or = l.operator.kind {
+            if truthy(&left) {
+                return Ok(left);
+            }
+        } else {
+            if !truthy(&left) {
+                return Ok(left);
+            }
+        }
+
+        self.evaluate(*l.right)
     }
 
     fn assign_eval(&mut self, a: Assign) -> Result<Value, InterpErr> {
@@ -196,7 +215,7 @@ impl Interpreter {
         let right = self.evaluate(*u.right)?;
 
         match u.operator.kind {
-            Tk::Bang => Ok(Value::Bool(!truthy(right))),
+            Tk::Bang => Ok(Value::Bool(!truthy(&right))),
             Tk::Minus => {
                 if let Literal::Number(n) = right {
                     return Ok(Value::Number(-n));
@@ -216,9 +235,9 @@ fn rt_error(line: usize, msg: &str) -> Result<Value, InterpErr> {
     })
 }
 
-fn truthy(v: Literal) -> bool {
+fn truthy(v: &Literal) -> bool {
     match v {
-        Literal::Bool(b) => b,
+        Literal::Bool(b) => *b,
         Literal::Null => false,
         _ => true,
     }

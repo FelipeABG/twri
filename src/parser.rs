@@ -1,5 +1,5 @@
 use crate::ast::{
-    Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, PrintStmt, Stmt, Unary,
+    Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt, Unary,
 };
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
@@ -124,7 +124,7 @@ impl Parser {
     }
 
     fn assign(&mut self) -> Result<Expr, InterpErr> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if let Tk::Equal = self.peek().kind {
             //consumens the '=' token
@@ -143,6 +143,30 @@ impl Parser {
         }
 
         Ok(expr)
+    }
+
+    fn or(&mut self) -> Result<Expr, InterpErr> {
+        let mut left = self.and()?;
+
+        while let Tk::Or = self.peek().kind {
+            let operator = self.next_token().clone();
+            let right = self.and()?;
+            left = Expr::Logical(Logical::new(Box::new(left), operator, Box::new(right)))
+        }
+
+        Ok(left)
+    }
+
+    fn and(&mut self) -> Result<Expr, InterpErr> {
+        let mut left = self.equality()?;
+
+        while let Tk::And = self.peek().kind {
+            let operator = self.next_token().clone();
+            let right = self.equality()?;
+            left = Expr::Logical(Logical::new(Box::new(left), operator, Box::new(right)))
+        }
+
+        Ok(left)
     }
 
     fn equality(&mut self) -> Result<Expr, InterpErr> {
