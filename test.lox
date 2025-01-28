@@ -1,8 +1,6 @@
-let x = 11;
+let a = 0;
 
-if x == 10 {
-  print 10;
-} else {
-  print 20;
+while a < 10 {
+  print a;
+  a = a + 1;
 }
-

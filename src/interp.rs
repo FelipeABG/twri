@@ -1,8 +1,9 @@
-use std::fmt::Display;
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use crate::{
     ast::{
         Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt, Unary,
+        WhileStmt,
     },
     env::Environment,
     error::InterpErr,
@@ -27,40 +28,49 @@ impl Display for Value {
 }
 
 pub struct Interpreter {
-    env: Environment,
+    env: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self {
-            env: Environment::new(None),
+            env: Rc::new(RefCell::new(Environment::new(None))),
         }
     }
 
     pub fn interpret(&mut self, stmts: Vec<Stmt>) -> Result<(), InterpErr> {
         Ok(for stmt in stmts {
-            self.execute(stmt)?
+            self.execute(&stmt)?
         })
     }
 
-    fn execute(&mut self, s: Stmt) -> Result<(), InterpErr> {
+    fn execute(&mut self, s: &Stmt) -> Result<(), InterpErr> {
         match s {
             Stmt::ExprStmt(expr_stmt) => self.expr_stmt_exec(expr_stmt),
             Stmt::PrintStmt(print_stmt) => self.print_stmt_exec(print_stmt),
             Stmt::LetStmt(let_stmt) => self.let_stmt_exec(let_stmt),
-            Stmt::Block(block) => self.block_stmt_exec(block),
+            Stmt::Block(block) => self.block_stmt_exec(block.iter().collect()),
             Stmt::IfStmt(if_stmt) => self.if_stmt_exec(if_stmt),
+            Stmt::WhileStmt(while_stmt) => self.while_stmt_exec(while_stmt),
         }
     }
 
-    fn if_stmt_exec(&mut self, c: IfStmt) -> Result<(), InterpErr> {
-        let condition = truthy(&self.evaluate(c.condition)?);
+    fn while_stmt_exec(&mut self, w: &WhileStmt) -> Result<(), InterpErr> {
+        while truthy(&self.evaluate(&w.condition)?) {
+            self.execute(&w.body)?
+        }
+
+        Ok(())
+    }
+
+    fn if_stmt_exec(&mut self, c: &IfStmt) -> Result<(), InterpErr> {
+        let condition = truthy(&self.evaluate(&c.condition)?);
 
         if condition {
-            self.execute(*c.if_branch)
+            self.execute(&c.if_branch)
         } else {
-            match c.else_branch {
-                Some(branch) => self.execute(*branch),
+            match &c.else_branch {
+                Some(branch) => self.execute(&branch),
                 None => Ok(()),
             }
         }
@@ -68,58 +78,55 @@ impl Interpreter {
 
     //sets the new env as the current one, executes
     //all statements and then sets the env as the previos one again
-    fn block_stmt_exec(&mut self, stmts: Vec<Stmt>) -> Result<(), InterpErr> {
-        let previous = self.env.clone();
-        let new = Environment::new(Some(Box::new(self.env.clone())));
-        self.env = new;
+    fn block_stmt_exec(&mut self, stmts: Vec<&Stmt>) -> Result<(), InterpErr> {
+        let previous = Rc::clone(&self.env);
+        self.env = Rc::new(RefCell::new(Environment::new(Some(self.env.clone()))));
 
-        for stmt in stmts {
-            self.execute(stmt)?;
-        }
+        let result = stmts.into_iter().try_for_each(|stat| self.execute(stat));
 
         self.env = previous;
-        Ok(())
+        result
     }
 
-    fn let_stmt_exec(&mut self, l: LetStmt) -> Result<(), InterpErr> {
-        match l.initializer {
+    fn let_stmt_exec(&mut self, l: &LetStmt) -> Result<(), InterpErr> {
+        match &l.initializer {
             Some(init) => {
-                let value = self.evaluate(init)?;
-                self.env.define(l.ident.lexeme, value);
+                let value = self.evaluate(&init)?;
+                RefCell::borrow_mut(&self.env).define(l.ident.lexeme.clone(), value);
             }
             None => {
-                self.env.define(l.ident.lexeme, Value::Null);
+                RefCell::borrow_mut(&self.env).define(l.ident.lexeme.clone(), Value::Null);
             }
         }
 
         Ok(())
     }
 
-    fn print_stmt_exec(&mut self, ps: PrintStmt) -> Result<(), InterpErr> {
-        let value = self.evaluate(ps.expr)?;
+    fn print_stmt_exec(&mut self, ps: &PrintStmt) -> Result<(), InterpErr> {
+        let value = self.evaluate(&ps.expr)?;
         println!("{value}");
         Ok(())
     }
 
-    fn expr_stmt_exec(&mut self, es: ExprStmt) -> Result<(), InterpErr> {
-        self.evaluate(es.expr)?;
+    fn expr_stmt_exec(&mut self, es: &ExprStmt) -> Result<(), InterpErr> {
+        self.evaluate(&es.expr)?;
         Ok(())
     }
 
-    fn evaluate(&mut self, e: Expr) -> Result<Value, InterpErr> {
+    fn evaluate(&mut self, e: &Expr) -> Result<Value, InterpErr> {
         match e {
             Expr::Assign(assign) => self.assign_eval(assign),
             Expr::Unary(unary) => self.unary_eval(unary),
             Expr::Binary(binary) => self.binary_eval(binary),
-            Expr::Grouping(expr) => self.evaluate(*expr),
-            Expr::Var(v) => self.env.get(v),
-            Expr::Lit(literal) => Ok(literal),
+            Expr::Grouping(expr) => self.evaluate(expr),
+            Expr::Var(v) => RefCell::borrow_mut(&self.env).get(v),
+            Expr::Lit(literal) => Ok(literal.clone()),
             Expr::Logical(logical) => self.logical_eval(logical),
         }
     }
 
-    fn logical_eval(&mut self, l: Logical) -> Result<Value, InterpErr> {
-        let left = self.evaluate(*l.left)?;
+    fn logical_eval(&mut self, l: &Logical) -> Result<Value, InterpErr> {
+        let left = self.evaluate(&l.left)?;
 
         if let Tk::Or = l.operator.kind {
             if truthy(&left) {
@@ -131,18 +138,18 @@ impl Interpreter {
             }
         }
 
-        self.evaluate(*l.right)
+        self.evaluate(&l.right)
     }
 
-    fn assign_eval(&mut self, a: Assign) -> Result<Value, InterpErr> {
-        let value = self.evaluate(*a.value)?;
-        self.env.assign(a.ident, value.clone())?;
+    fn assign_eval(&mut self, a: &Assign) -> Result<Value, InterpErr> {
+        let value = self.evaluate(&a.value)?;
+        RefCell::borrow_mut(&self.env).assign(a.ident.clone(), value.clone())?;
         Ok(value)
     }
 
-    fn binary_eval(&mut self, b: Binary) -> Result<Value, InterpErr> {
-        let left = self.evaluate(*b.left)?;
-        let right = self.evaluate(*b.right)?;
+    fn binary_eval(&mut self, b: &Binary) -> Result<Value, InterpErr> {
+        let left = self.evaluate(&b.left)?;
+        let right = self.evaluate(&b.right)?;
 
         match b.operator.kind {
             Tk::Minus => {
@@ -211,8 +218,8 @@ impl Interpreter {
         }
     }
 
-    fn unary_eval(&mut self, u: Unary) -> Result<Value, InterpErr> {
-        let right = self.evaluate(*u.right)?;
+    fn unary_eval(&mut self, u: &Unary) -> Result<Value, InterpErr> {
+        let right = self.evaluate(&u.right)?;
 
         match u.operator.kind {
             Tk::Bang => Ok(Value::Bool(!truthy(&right))),

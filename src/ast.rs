@@ -7,8 +7,10 @@ define! {
                 | printStmt(PrintStmt)
                 | letStmt(LetStmt)
                 | block(Vec<Stmt>)
-                | ifStmt(IfStmt);
+                | ifStmt(IfStmt)
+                | whileStmt(WhileStmt);
 
+    struct whileStmt -> condition(Expr), body(Box<Stmt>);
     struct ifStmt -> condition(Expr), if_branch(Box<Stmt>), else_branch(Option<Box<Stmt>>);
     struct exprStmt -> expr(Expr);
     struct printStmt -> expr(Expr);

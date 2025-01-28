@@ -1,5 +1,6 @@
 use crate::ast::{
     Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt, Unary,
+    WhileStmt,
 };
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
@@ -79,7 +80,19 @@ impl Parser {
             return self.if_statement();
         }
 
+        if let Tk::While = self.peek().kind {
+            //consumes the 'while' token
+            self.next_token();
+            return self.while_statement();
+        }
+
         self.expr_statement()
+    }
+
+    fn while_statement(&mut self) -> Result<Stmt, InterpErr> {
+        let condition = self.expression()?;
+        let body = Box::new(self.statement()?);
+        Ok(Stmt::WhileStmt(WhileStmt::new(condition, body)))
     }
 
     fn if_statement(&mut self) -> Result<Stmt, InterpErr> {

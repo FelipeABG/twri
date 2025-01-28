@@ -1,17 +1,17 @@
 use crate::{ast::Literal, error::InterpErr, token::Token};
 use format as fmt;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 type Value = Literal;
 
 #[derive(Clone)]
 pub struct Environment {
-    variables: HashMap<String, Value>,
-    enclosing: Option<Box<Environment>>,
+    pub variables: HashMap<String, Value>,
+    pub enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
-    pub fn new(enclosing: Option<Box<Environment>>) -> Self {
+    pub fn new(enclosing: Option<Rc<RefCell<Environment>>>) -> Self {
         Self {
             variables: HashMap::new(),
             enclosing,
@@ -26,8 +26,8 @@ impl Environment {
         match self.variables.get(&key.lexeme) {
             Some(_) => Ok(self.variables.insert(key.lexeme, value).unwrap()),
             None => {
-                if let Some(e) = &mut self.enclosing {
-                    return e.assign(key, value);
+                if let Some(e) = &self.enclosing {
+                    return RefCell::borrow_mut(e).assign(key, value);
                 }
 
                 Err(InterpErr::RuntimeError {
@@ -38,12 +38,12 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, key: Token) -> Result<Value, InterpErr> {
+    pub fn get(&self, key: &Token) -> Result<Value, InterpErr> {
         match self.variables.get(&key.lexeme) {
             Some(v) => Ok(v.clone()),
             None => {
                 if let Some(e) = &self.enclosing {
-                    return e.get(key);
+                    return RefCell::borrow_mut(e).get(key);
                 };
 
                 Err(InterpErr::RuntimeError {
