@@ -1,8 +1,14 @@
-use crate::{ast::Literal, error::InterpErr, interp::Interpreter};
+use crate::{error::InterpErr, interp::Interpreter, obj::LoxObject};
 
-type Value = Literal;
+#[derive(Clone, PartialEq)]
+pub struct Callable {}
 
-pub trait LoxCallable {
-    fn arity(&self) -> usize;
-    fn call(&mut self, interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, InterpErr>;
+impl Callable {
+    pub fn call(&self, interp: &Interpreter, args: Vec<LoxObject>) -> Result<LoxObject, InterpErr> {
+        todo!()
+    }
+
+    pub fn arity(&self) -> usize {
+        todo!()
+    }
 }

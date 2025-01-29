@@ -3,7 +3,6 @@ use crate::{
         Assign, Binary, Call, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt,
         Unary, WhileStmt,
     },
-    call::LoxCallable,
     env::Environment,
     error::InterpErr,
     error::InterpErr as Ie,
@@ -14,16 +13,20 @@ use format as fmt;
 use std::{cell::RefCell, rc::Rc};
 
 pub struct Interpreter {
+    //represents the current environment being used by the interpreter
     env: Rc<RefCell<Environment>>,
+
+    //represents the global environment
     globals: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let env = Rc::new(RefCell::new(Environment::new(None)));
+        let mut globals = Rc::new(RefCell::new(Environment::new(None)));
+        RefCell::borrow_mut(&mut globals);
         Self {
-            env: Rc::clone(&env),
-            globals: Rc::clone(&env),
+            env: Rc::clone(&globals),
+            globals: Rc::clone(&globals),
         }
     }
 
@@ -133,25 +136,22 @@ impl Interpreter {
             args.push(self.evaluate(arg)?);
         }
 
-        //TODO: check if the type is callable!!!! if not, return an error
+        if let LoxObject::Callable(callable) = callee {
+            if args.len() != callable.arity() {
+                return rt_error(
+                    c.paren.line,
+                    &fmt!(
+                        "Expected {} arguments, but {} where provided",
+                        callable.arity(),
+                        args.len()
+                    ),
+                );
+            }
 
-        let function: &dyn LoxCallable = callee;
-
-        //checks to see if the number of arguments provided matches the number of arguments
-        //required
-        if function.arity() != args.len() {
-            return Err(Ie::RuntimeError {
-                line: c.paren.line,
-                msg: fmt!(
-                    "Expected {} arguments, found {}",
-                    function.arity(),
-                    args.len()
-                ),
-            });
+            return callable.call(self, args);
         }
 
-        function.call(self, args);
-        todo!()
+        return rt_error(c.paren.line, "Can only call functions and classes");
     }
 
     fn logical_eval(&mut self, l: &Logical) -> Result<LoxObject, InterpErr> {
