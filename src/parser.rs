@@ -1,6 +1,6 @@
 use crate::ast::{
-    Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt, Unary,
-    WhileStmt,
+    Assign, Binary, Call, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt,
+    Unary, WhileStmt,
 };
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
@@ -96,8 +96,6 @@ impl Parser {
     }
 
     fn for_statement(&mut self) -> Result<Stmt, InterpErr> {
-        self.expect(Tk::LeftParen, "Expect '(' after 'for'")?;
-
         let init;
         if let Tk::Semicolon = self.peek().kind {
             init = None;
@@ -121,7 +119,6 @@ impl Parser {
         if !matches!(self.peek().kind, Tk::Semicolon) {
             increment = Some(self.expression()?);
         }
-        self.expect(Tk::RightParen, "Expect  ')' after for clauses")?;
 
         //body
         let mut body = self.statement()?;
@@ -296,7 +293,46 @@ impl Parser {
             return Ok(Expr::Unary(Unary::new(operator, right)));
         }
 
-        self.primary()
+        self.call()
+    }
+
+    fn call(&mut self) -> Result<Expr, InterpErr> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if let Tk::LeftParen = self.peek().kind {
+                //consumes the '(' token
+                self.next_token();
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, e: Expr) -> Result<Expr, InterpErr> {
+        let mut args = Vec::new();
+        if !matches!(self.peek().kind, Tk::RightParen) {
+            loop {
+                if args.len() > 255 {
+                    return Err(InterpErr::RuntimeError {
+                        line: self.peek().line,
+                        msg: "functions only accept a maximum of 255 arguments".to_string(),
+                    });
+                }
+                args.push(self.expression()?);
+                if let Tk::Comma = self.peek().kind {
+                    self.next_token();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.expect(Tk::RightParen, "Expect ')' after arguments")?;
+        Ok(Expr::Call(Call::new(Box::new(e), paren, args)))
     }
 
     fn primary(&mut self) -> Result<Expr, InterpErr> {
@@ -336,10 +372,9 @@ impl Parser {
         }
     }
 
-    fn expect(&mut self, kind: TokenKind, msg: &str) -> Result<(), InterpErr> {
+    fn expect(&mut self, kind: TokenKind, msg: &str) -> Result<Token, InterpErr> {
         if kind == self.peek().kind {
-            self.next_token();
-            return Ok(());
+            return Ok(self.next_token().clone());
         }
 
         Err(Ie::SyntaxError {

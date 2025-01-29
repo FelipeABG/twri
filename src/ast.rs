@@ -20,11 +20,13 @@ define! {
     enum expr ->  assign(Assign)
                 | unary(Unary)
                 | binary(Binary)
+                | call(Call)
                 | grouping(Box<Expr>)
                 | lit(Literal)
                 | logical(Logical)
                 | var(Token);
 
+    struct call -> callee(Box<Expr>), paren(Token), args(Vec<Expr>);
     struct assign -> ident(Token), value(Box<Expr>);
     struct unary -> operator(Token), right(Box<Expr>);
     struct binary -> left(Box<Expr>), operator(Token), right(Box<Expr>);
