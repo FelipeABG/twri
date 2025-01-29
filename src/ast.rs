@@ -10,6 +10,7 @@ define! {
                 | ifStmt(IfStmt)
                 | whileStmt(WhileStmt);
 
+    struct forStmt -> range(Expr), body(Box<Stmt>);
     struct whileStmt -> condition(Expr), body(Box<Stmt>);
     struct ifStmt -> condition(Expr), if_branch(Box<Stmt>), else_branch(Option<Box<Stmt>>);
     struct exprStmt -> expr(Expr);

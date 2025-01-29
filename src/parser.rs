@@ -86,7 +86,62 @@ impl Parser {
             return self.while_statement();
         }
 
+        if let Tk::For = self.peek().kind {
+            //consumes the 'for' token
+            self.next_token();
+            return self.for_statement();
+        }
+
         self.expr_statement()
+    }
+
+    fn for_statement(&mut self) -> Result<Stmt, InterpErr> {
+        self.expect(Tk::LeftParen, "Expect '(' after 'for'")?;
+
+        let init;
+        if let Tk::Semicolon = self.peek().kind {
+            init = None;
+        } else if let Tk::Let = self.peek().kind {
+            //consumes the 'let' token
+            self.next_token();
+            init = Some(self.let_declaration()?);
+        } else {
+            init = Some(self.expr_statement()?);
+        }
+
+        //Condition
+        let mut condition = None;
+        if !matches!(self.peek().kind, Tk::Semicolon) {
+            condition = Some(self.expression()?);
+        }
+        self.expect(Tk::Semicolon, "Expected ';' after loop condition")?;
+
+        //Increment
+        let mut increment = None;
+        if !matches!(self.peek().kind, Tk::Semicolon) {
+            increment = Some(self.expression()?);
+        }
+        self.expect(Tk::RightParen, "Expect  ')' after for clauses")?;
+
+        //body
+        let mut body = self.statement()?;
+
+        // Desugaring into a while loop. THIS IS FUCKING MAGIC!!!
+        if let Some(inc) = increment {
+            body = Stmt::Block(Vec::from([body, Stmt::ExprStmt(ExprStmt::new(inc))]))
+        }
+
+        if let None = condition {
+            condition = Some(Expr::Lit(Literal::Bool(true)))
+        }
+
+        body = Stmt::WhileStmt(WhileStmt::new(condition.unwrap(), Box::new(body)));
+
+        if let Some(i) = init {
+            body = Stmt::Block(Vec::from([i, body]))
+        }
+
+        Ok(body)
     }
 
     fn while_statement(&mut self) -> Result<Stmt, InterpErr> {
