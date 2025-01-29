@@ -130,8 +130,8 @@ impl Interpreter {
         let callee = self.evaluate(&c.callee)?;
         let mut args = Vec::new();
 
-        for arg in c.args {
-            args.push(self.evaluate(&arg)?);
+        for arg in &c.args {
+            args.push(self.evaluate(arg)?);
         }
 
         todo!()
