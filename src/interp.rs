@@ -2,8 +2,8 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use crate::{
     ast::{
-        Assign, Binary, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt, Unary,
-        WhileStmt,
+        Assign, Binary, Call, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt,
+        Unary, WhileStmt,
     },
     env::Environment,
     error::InterpErr,
@@ -122,7 +122,19 @@ impl Interpreter {
             Expr::Var(v) => RefCell::borrow_mut(&self.env).get(v),
             Expr::Lit(literal) => Ok(literal.clone()),
             Expr::Logical(logical) => self.logical_eval(logical),
+            Expr::Call(call) => self.call_eval(call),
         }
+    }
+
+    fn call_eval(&mut self, c: &Call) -> Result<Value, InterpErr> {
+        let callee = self.evaluate(&c.callee)?;
+        let mut args = Vec::new();
+
+        for arg in c.args {
+            args.push(self.evaluate(&arg)?);
+        }
+
+        todo!()
     }
 
     fn logical_eval(&mut self, l: &Logical) -> Result<Value, InterpErr> {
