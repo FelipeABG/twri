@@ -1,12 +1,10 @@
-use crate::{ast::Literal, error::InterpErr, token::Token};
+use crate::{error::InterpErr, obj::LoxObject, token::Token};
 use format as fmt;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-type Value = Literal;
-
 #[derive(Clone)]
 pub struct Environment {
-    pub variables: HashMap<String, Value>,
+    pub variables: HashMap<String, LoxObject>,
     pub enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
@@ -18,11 +16,11 @@ impl Environment {
         }
     }
 
-    pub fn define(&mut self, key: String, value: Value) {
+    pub fn define(&mut self, key: String, value: LoxObject) {
         self.variables.insert(key, value);
     }
 
-    pub fn assign(&mut self, key: Token, value: Value) -> Result<Value, InterpErr> {
+    pub fn assign(&mut self, key: Token, value: LoxObject) -> Result<LoxObject, InterpErr> {
         match self.variables.get(&key.lexeme) {
             Some(_) => Ok(self.variables.insert(key.lexeme, value).unwrap()),
             None => {
@@ -38,7 +36,7 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, key: &Token) -> Result<Value, InterpErr> {
+    pub fn get(&self, key: &Token) -> Result<LoxObject, InterpErr> {
         match self.variables.get(&key.lexeme) {
             Some(v) => Ok(v.clone()),
             None => {

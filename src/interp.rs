@@ -1,40 +1,29 @@
-use std::{cell::RefCell, fmt::Display, rc::Rc};
-
 use crate::{
     ast::{
         Assign, Binary, Call, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt,
         Unary, WhileStmt,
     },
+    call::LoxCallable,
     env::Environment,
     error::InterpErr,
     error::InterpErr as Ie,
+    obj::LoxObject,
     token::TokenKind as Tk,
 };
-
-// Literals are a bit of syntax that produces a value. They exist in the source code.
-// Values dont exist in the source code, they are computed in the interprerter.
-type Value = Literal;
-
-impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let msg = match self {
-            Literal::Str(s) => format!("{s}"),
-            Literal::Number(n) => format!("{n}"),
-            Literal::Null => format!("null"),
-            Literal::Bool(b) => format!("{b}"),
-        };
-        write!(f, "{msg}")
-    }
-}
+use format as fmt;
+use std::{cell::RefCell, rc::Rc};
 
 pub struct Interpreter {
     env: Rc<RefCell<Environment>>,
+    globals: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let env = Rc::new(RefCell::new(Environment::new(None)));
         Self {
-            env: Rc::new(RefCell::new(Environment::new(None))),
+            env: Rc::clone(&env),
+            globals: Rc::clone(&env),
         }
     }
 
@@ -95,7 +84,7 @@ impl Interpreter {
                 RefCell::borrow_mut(&self.env).define(l.ident.lexeme.clone(), value);
             }
             None => {
-                RefCell::borrow_mut(&self.env).define(l.ident.lexeme.clone(), Value::Null);
+                RefCell::borrow_mut(&self.env).define(l.ident.lexeme.clone(), LoxObject::Null);
             }
         }
 
@@ -113,20 +102,30 @@ impl Interpreter {
         Ok(())
     }
 
-    fn evaluate(&mut self, e: &Expr) -> Result<Value, InterpErr> {
+    fn evaluate(&mut self, e: &Expr) -> Result<LoxObject, InterpErr> {
         match e {
             Expr::Assign(assign) => self.assign_eval(assign),
             Expr::Unary(unary) => self.unary_eval(unary),
             Expr::Binary(binary) => self.binary_eval(binary),
             Expr::Grouping(expr) => self.evaluate(expr),
             Expr::Var(v) => RefCell::borrow_mut(&self.env).get(v),
-            Expr::Lit(literal) => Ok(literal.clone()),
+            Expr::Lit(literal) => self.literal_eval(literal),
             Expr::Logical(logical) => self.logical_eval(logical),
             Expr::Call(call) => self.call_eval(call),
         }
     }
 
-    fn call_eval(&mut self, c: &Call) -> Result<Value, InterpErr> {
+    fn literal_eval(&self, l: &Literal) -> Result<LoxObject, InterpErr> {
+        // basically just converts from literal to a lox object
+        match l {
+            Literal::Str(s) => Ok(LoxObject::Str(s.clone())),
+            Literal::Number(n) => Ok(LoxObject::Number(*n)),
+            Literal::Bool(b) => Ok(LoxObject::Bool(*b)),
+            Literal::Null => Ok(LoxObject::Null),
+        }
+    }
+
+    fn call_eval(&mut self, c: &Call) -> Result<LoxObject, InterpErr> {
         let callee = self.evaluate(&c.callee)?;
         let mut args = Vec::new();
 
@@ -134,10 +133,28 @@ impl Interpreter {
             args.push(self.evaluate(arg)?);
         }
 
+        //TODO: check if the type is callable!!!! if not, return an error
+
+        let function: &dyn LoxCallable = callee;
+
+        //checks to see if the number of arguments provided matches the number of arguments
+        //required
+        if function.arity() != args.len() {
+            return Err(Ie::RuntimeError {
+                line: c.paren.line,
+                msg: fmt!(
+                    "Expected {} arguments, found {}",
+                    function.arity(),
+                    args.len()
+                ),
+            });
+        }
+
+        function.call(self, args);
         todo!()
     }
 
-    fn logical_eval(&mut self, l: &Logical) -> Result<Value, InterpErr> {
+    fn logical_eval(&mut self, l: &Logical) -> Result<LoxObject, InterpErr> {
         let left = self.evaluate(&l.left)?;
 
         if let Tk::Or = l.operator.kind {
@@ -153,91 +170,92 @@ impl Interpreter {
         self.evaluate(&l.right)
     }
 
-    fn assign_eval(&mut self, a: &Assign) -> Result<Value, InterpErr> {
+    fn assign_eval(&mut self, a: &Assign) -> Result<LoxObject, InterpErr> {
         let value = self.evaluate(&a.value)?;
         RefCell::borrow_mut(&self.env).assign(a.ident.clone(), value.clone())?;
         Ok(value)
     }
 
-    fn binary_eval(&mut self, b: &Binary) -> Result<Value, InterpErr> {
+    fn binary_eval(&mut self, b: &Binary) -> Result<LoxObject, InterpErr> {
         let left = self.evaluate(&b.left)?;
         let right = self.evaluate(&b.right)?;
 
         match b.operator.kind {
             Tk::Minus => {
-                if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
-                    return Ok(Value::Number(l - r));
+                if let (LoxObject::Number(l), LoxObject::Number(r)) = (left, right) {
+                    return Ok(LoxObject::Number(l - r));
                 }
 
                 rt_error(b.operator.line, "Operands must be number")
             }
             Tk::Slash => {
-                if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
-                    return Ok(Value::Number(l / r));
+                if let (LoxObject::Number(l), LoxObject::Number(r)) = (left, right) {
+                    return Ok(LoxObject::Number(l / r));
                 }
 
                 rt_error(b.operator.line, "Operands must be number")
             }
             Tk::Star => {
-                if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
-                    return Ok(Value::Number(l * r));
+                if let (LoxObject::Number(l), LoxObject::Number(r)) = (left, right) {
+                    return Ok(LoxObject::Number(l * r));
                 }
 
                 rt_error(b.operator.line, "Operands must be number")
             }
             Tk::Plus => {
-                if let (Literal::Number(l), Literal::Number(r)) = (left.clone(), right.clone()) {
-                    return Ok(Value::Number(l + r));
+                if let (LoxObject::Number(l), LoxObject::Number(r)) = (left.clone(), right.clone())
+                {
+                    return Ok(LoxObject::Number(l + r));
                 }
 
-                if let (Literal::Str(l), Literal::Str(r)) = (left, right) {
-                    return Ok(Value::Str(l + &r));
+                if let (LoxObject::Str(l), LoxObject::Str(r)) = (left, right) {
+                    return Ok(LoxObject::Str(l + &r));
                 }
 
                 rt_error(b.operator.line, "Operand must be 'string' or 'number'")
             }
             Tk::Greater => {
-                if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
-                    return Ok(Value::Bool(l > r));
+                if let (LoxObject::Number(l), LoxObject::Number(r)) = (left, right) {
+                    return Ok(LoxObject::Bool(l > r));
                 }
 
                 rt_error(b.operator.line, "Operands must be number")
             }
             Tk::GreaterEqual => {
-                if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
-                    return Ok(Value::Bool(l >= r));
+                if let (LoxObject::Number(l), LoxObject::Number(r)) = (left, right) {
+                    return Ok(LoxObject::Bool(l >= r));
                 }
 
                 rt_error(b.operator.line, "Operands must be number")
             }
             Tk::Less => {
-                if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
-                    return Ok(Value::Bool(l < r));
+                if let (LoxObject::Number(l), LoxObject::Number(r)) = (left, right) {
+                    return Ok(LoxObject::Bool(l < r));
                 }
 
                 rt_error(b.operator.line, "Operands must be number")
             }
             Tk::LessEqual => {
-                if let (Literal::Number(l), Literal::Number(r)) = (left, right) {
-                    return Ok(Value::Bool(l <= r));
+                if let (LoxObject::Number(l), LoxObject::Number(r)) = (left, right) {
+                    return Ok(LoxObject::Bool(l <= r));
                 }
 
                 rt_error(b.operator.line, "Operands must be number")
             }
-            Tk::BangEqual => Ok(Value::Bool(left != right)),
-            Tk::EqualEqual => Ok(Value::Bool(left == right)),
+            Tk::BangEqual => Ok(LoxObject::Bool(left != right)),
+            Tk::EqualEqual => Ok(LoxObject::Bool(left == right)),
             _ => rt_error(b.operator.line, "Invalid operator"),
         }
     }
 
-    fn unary_eval(&mut self, u: &Unary) -> Result<Value, InterpErr> {
+    fn unary_eval(&mut self, u: &Unary) -> Result<LoxObject, InterpErr> {
         let right = self.evaluate(&u.right)?;
 
         match u.operator.kind {
-            Tk::Bang => Ok(Value::Bool(!truthy(&right))),
+            Tk::Bang => Ok(LoxObject::Bool(!truthy(&right))),
             Tk::Minus => {
-                if let Literal::Number(n) = right {
-                    return Ok(Value::Number(-n));
+                if let LoxObject::Number(n) = right {
+                    return Ok(LoxObject::Number(-n));
                 }
 
                 rt_error(u.operator.line, "Operand must be a number")
@@ -247,17 +265,17 @@ impl Interpreter {
     }
 }
 
-fn rt_error(line: usize, msg: &str) -> Result<Value, InterpErr> {
+fn rt_error(line: usize, msg: &str) -> Result<LoxObject, InterpErr> {
     Err(Ie::RuntimeError {
         line,
         msg: msg.to_string(),
     })
 }
 
-fn truthy(v: &Literal) -> bool {
+fn truthy(v: &LoxObject) -> bool {
     match v {
-        Literal::Bool(b) => *b,
-        Literal::Null => false,
+        LoxObject::Bool(b) => *b,
+        LoxObject::Null => false,
         _ => true,
     }
 }
