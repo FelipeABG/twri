@@ -1,11 +1,7 @@
-let before = clock();
-
-let iter = 0;
-while iter < 1000000 {
-  print iter;
-  iter = iter + 1;
+fn main() {
+  x = 30;
+  print x;
 }
 
-let after = clock();
 
-print after - before;
+main();

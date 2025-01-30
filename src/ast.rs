@@ -11,7 +11,7 @@ define! {
                 | whileStmt(WhileStmt)
                 | fnStmt(FnStmt);
 
-    struct FnStmt -> ident(Token), args(Vec<Token>), body(Vec<Stmt>);
+    struct FnStmt -> ident(Token), params(Vec<Token>), body(Vec<Stmt>);
     struct forStmt -> range(Expr), body(Box<Stmt>);
     struct whileStmt -> condition(Expr), body(Box<Stmt>);
     struct ifStmt -> condition(Expr), if_branch(Box<Stmt>), else_branch(Option<Box<Stmt>>);

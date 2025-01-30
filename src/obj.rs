@@ -1,8 +1,8 @@
-use crate::{error::InterpErr, interp::Interpreter};
-use std::fmt::Display;
+use crate::{ast::FnStmt, env::Environment, error::InterpErr, interp::Interpreter};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 pub trait Callable {
-    fn call(&self, interp: &Interpreter, args: Vec<LoxObject>) -> Result<LoxObject, InterpErr>;
+    fn call(&self, interp: &mut Interpreter, args: Vec<LoxObject>) -> Result<LoxObject, InterpErr>;
     fn arity(&self) -> usize;
     fn to_string(&self) -> String;
     fn clone_box(&self) -> Box<dyn Callable>;
@@ -14,6 +14,44 @@ pub enum LoxObject {
     Bool(bool),
     Null,
     Callable(Box<dyn Callable>),
+}
+
+pub struct LoxFunction {
+    declaration: FnStmt,
+}
+
+impl LoxFunction {
+    pub fn new(declaration: FnStmt) -> Self {
+        Self { declaration }
+    }
+}
+
+impl Callable for LoxFunction {
+    fn call(&self, interp: &mut Interpreter, args: Vec<LoxObject>) -> Result<LoxObject, InterpErr> {
+        let mut env = Environment::new(Some(Rc::clone(&interp.globals)));
+
+        for i in 0..self.declaration.params.len() {
+            env.define(&self.declaration.params[i].lexeme, args[i].clone());
+        }
+
+        interp.block_stmt_exec(
+            self.declaration.body.iter().collect(),
+            Rc::new(RefCell::new(env)),
+        )?;
+        Ok(LoxObject::Null)
+    }
+
+    fn arity(&self) -> usize {
+        self.declaration.params.len()
+    }
+
+    fn to_string(&self) -> String {
+        format!("<fn {}>", self.declaration.ident.lexeme)
+    }
+
+    fn clone_box(&self) -> Box<dyn Callable> {
+        Box::new(LoxFunction::new(self.declaration.clone()))
+    }
 }
 
 impl Clone for Box<dyn Callable> {

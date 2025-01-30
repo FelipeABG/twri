@@ -1,13 +1,13 @@
 use crate::{
     ast::{
-        Assign, Binary, Call, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt,
-        Unary, WhileStmt,
+        Assign, Binary, Call, Expr, ExprStmt, FnStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt,
+        Stmt, Unary, WhileStmt,
     },
     env::Environment,
     error::InterpErr,
     error::InterpErr as Ie,
     loxstd::Clock,
-    obj::LoxObject,
+    obj::{LoxFunction, LoxObject},
     token::TokenKind as Tk,
 };
 use format as fmt;
@@ -18,7 +18,7 @@ pub struct Interpreter {
     env: Rc<RefCell<Environment>>,
 
     //represents the global environment
-    globals: Rc<RefCell<Environment>>,
+    pub globals: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
@@ -42,10 +42,21 @@ impl Interpreter {
             Stmt::ExprStmt(expr_stmt) => self.expr_stmt_exec(expr_stmt),
             Stmt::PrintStmt(print_stmt) => self.print_stmt_exec(print_stmt),
             Stmt::LetStmt(let_stmt) => self.let_stmt_exec(let_stmt),
-            Stmt::Block(block) => self.block_stmt_exec(block.iter().collect()),
+            Stmt::Block(block) => self.block_stmt_exec(
+                block.iter().collect(),
+                Rc::new(RefCell::new(Environment::new(Some(self.env.clone())))),
+            ),
             Stmt::IfStmt(if_stmt) => self.if_stmt_exec(if_stmt),
             Stmt::WhileStmt(while_stmt) => self.while_stmt_exec(while_stmt),
+            Stmt::FnStmt(fn_stmt) => self.fn_stmt_exec(fn_stmt),
         }
+    }
+
+    fn fn_stmt_exec(&mut self, f: &FnStmt) -> Result<(), InterpErr> {
+        let func = LoxFunction::new(f.clone());
+        RefCell::borrow_mut(&mut self.env)
+            .define(&f.ident.lexeme, LoxObject::Callable(Box::new(func)));
+        Ok(())
     }
 
     fn while_stmt_exec(&mut self, w: &WhileStmt) -> Result<(), InterpErr> {
@@ -71,9 +82,13 @@ impl Interpreter {
 
     //sets the new env as the current one, executes
     //all statements and then sets the env as the previos one again
-    fn block_stmt_exec(&mut self, stmts: Vec<&Stmt>) -> Result<(), InterpErr> {
+    pub fn block_stmt_exec(
+        &mut self,
+        stmts: Vec<&Stmt>,
+        new_env: Rc<RefCell<Environment>>,
+    ) -> Result<(), InterpErr> {
         let previous = Rc::clone(&self.env);
-        self.env = Rc::new(RefCell::new(Environment::new(Some(self.env.clone()))));
+        self.env = new_env;
 
         let result = stmts.into_iter().try_for_each(|stat| self.execute(stat));
 

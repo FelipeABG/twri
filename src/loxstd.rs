@@ -6,7 +6,7 @@ use format as fmt;
 
 pub struct Clock {}
 impl Callable for Clock {
-    fn call(&self, _interp: &Interpreter, _args: Vec<LoxObject>) -> Result<LoxObject, InterpErr> {
+    fn call(&self, _: &mut Interpreter, _: Vec<LoxObject>) -> Result<LoxObject, InterpErr> {
         Ok(LoxObject::Number(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
