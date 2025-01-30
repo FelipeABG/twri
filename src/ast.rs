@@ -8,8 +8,10 @@ define! {
                 | letStmt(LetStmt)
                 | block(Vec<Stmt>)
                 | ifStmt(IfStmt)
-                | whileStmt(WhileStmt);
+                | whileStmt(WhileStmt)
+                | fnSttmt(FnStmt);
 
+    struct FnStmt -> ident(Token), args(Vec<Token>), body(Box<Stmt>);
     struct forStmt -> range(Expr), body(Box<Stmt>);
     struct whileStmt -> condition(Expr), body(Box<Stmt>);
     struct ifStmt -> condition(Expr), if_branch(Box<Stmt>), else_branch(Option<Box<Stmt>>);

@@ -5,7 +5,6 @@ use crate::obj::LoxObject;
 use format as fmt;
 
 pub struct Clock {}
-
 impl Callable for Clock {
     fn call(&self, _interp: &Interpreter, _args: Vec<LoxObject>) -> Result<LoxObject, InterpErr> {
         Ok(LoxObject::Number(

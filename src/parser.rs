@@ -92,7 +92,17 @@ impl Parser {
             return self.for_statement();
         }
 
+        if let Tk::Fn = self.peek().kind {
+            //consues the 'fn' token
+            self.next_token();
+            return self.fn_statement();
+        }
+
         self.expr_statement()
+    }
+
+    fn fn_statement(&mut self) -> Result<Stmt, InterpErr> {
+        let ident = self.expect(Tk::Identifier, "Expected identifier")?;
     }
 
     fn for_statement(&mut self) -> Result<Stmt, InterpErr> {

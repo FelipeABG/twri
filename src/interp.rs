@@ -6,7 +6,7 @@ use crate::{
     env::Environment,
     error::InterpErr,
     error::InterpErr as Ie,
-    native::Clock,
+    loxstd::Clock,
     obj::LoxObject,
     token::TokenKind as Tk,
 };
