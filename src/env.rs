@@ -16,8 +16,8 @@ impl Environment {
         }
     }
 
-    pub fn define(&mut self, key: String, value: LoxObject) {
-        self.variables.insert(key, value);
+    pub fn define(&mut self, key: &str, value: LoxObject) {
+        self.variables.insert(key.to_string(), value);
     }
 
     pub fn assign(&mut self, key: Token, value: LoxObject) -> Result<LoxObject, InterpErr> {

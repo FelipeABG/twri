@@ -6,6 +6,7 @@ use crate::{
     env::Environment,
     error::InterpErr,
     error::InterpErr as Ie,
+    native::Clock,
     obj::LoxObject,
     token::TokenKind as Tk,
 };
@@ -23,7 +24,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         let mut globals = Rc::new(RefCell::new(Environment::new(None)));
-        RefCell::borrow_mut(&mut globals);
+        RefCell::borrow_mut(&mut globals).define("clock", LoxObject::Callable(Box::new(Clock {})));
         Self {
             env: Rc::clone(&globals),
             globals: Rc::clone(&globals),
@@ -84,10 +85,10 @@ impl Interpreter {
         match &l.initializer {
             Some(init) => {
                 let value = self.evaluate(&init)?;
-                RefCell::borrow_mut(&self.env).define(l.ident.lexeme.clone(), value);
+                RefCell::borrow_mut(&self.env).define(&l.ident.lexeme, value);
             }
             None => {
-                RefCell::borrow_mut(&self.env).define(l.ident.lexeme.clone(), LoxObject::Null);
+                RefCell::borrow_mut(&self.env).define(&l.ident.lexeme, LoxObject::Null);
             }
         }
 
@@ -202,18 +203,11 @@ impl Interpreter {
 
                 rt_error(b.operator.line, "Operands must be number")
             }
-            Tk::Plus => {
-                if let (LoxObject::Number(l), LoxObject::Number(r)) = (left.clone(), right.clone())
-                {
-                    return Ok(LoxObject::Number(l + r));
-                }
-
-                if let (LoxObject::Str(l), LoxObject::Str(r)) = (left, right) {
-                    return Ok(LoxObject::Str(l + &r));
-                }
-
-                rt_error(b.operator.line, "Operand must be 'string' or 'number'")
-            }
+            Tk::Plus => match (left, right) {
+                (LoxObject::Number(l), LoxObject::Number(r)) => Ok(LoxObject::Number(l + r)),
+                (LoxObject::Str(l), LoxObject::Str(r)) => Ok(LoxObject::Str(l + &r)),
+                _ => rt_error(b.operator.line, "Operand must be 'string' or 'number'"),
+            },
             Tk::Greater => {
                 if let (LoxObject::Number(l), LoxObject::Number(r)) = (left, right) {
                     return Ok(LoxObject::Bool(l > r));

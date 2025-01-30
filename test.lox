@@ -1,4 +1,11 @@
-for let a = 0; a < 10; a = a + 1 {
-  print "foo";
+let before = clock();
+
+let iter = 0;
+while iter < 1000000 {
+  print iter;
+  iter = iter + 1;
 }
 
+let after = clock();
+
+print after - before;
