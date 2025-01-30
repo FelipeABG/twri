@@ -9,9 +9,9 @@ define! {
                 | block(Vec<Stmt>)
                 | ifStmt(IfStmt)
                 | whileStmt(WhileStmt)
-                | fnSttmt(FnStmt);
+                | fnStmt(FnStmt);
 
-    struct FnStmt -> ident(Token), args(Vec<Token>), body(Box<Stmt>);
+    struct FnStmt -> ident(Token), args(Vec<Token>), body(Vec<Stmt>);
     struct forStmt -> range(Expr), body(Box<Stmt>);
     struct whileStmt -> condition(Expr), body(Box<Stmt>);
     struct ifStmt -> condition(Expr), if_branch(Box<Stmt>), else_branch(Option<Box<Stmt>>);

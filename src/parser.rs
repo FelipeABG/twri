@@ -1,6 +1,6 @@
 use crate::ast::{
-    Assign, Binary, Call, Expr, ExprStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt, Stmt,
-    Unary, WhileStmt,
+    Assign, Binary, Call, Expr, ExprStmt, FnStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt,
+    Stmt, Unary, WhileStmt,
 };
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
@@ -103,6 +103,25 @@ impl Parser {
 
     fn fn_statement(&mut self) -> Result<Stmt, InterpErr> {
         let ident = self.expect(Tk::Identifier, "Expected identifier")?;
+        self.expect(Tk::LeftParen, "Expected '(' after function identifier");
+
+        let mut args = Vec::new();
+        while !matches!(self.peek().kind, Tk::RightParen) {
+            if args.len() > 255 {
+                return Err(InterpErr::RuntimeError {
+                    line: self.peek().line,
+                    msg: "Cant have more than 255 parameters".to_string(),
+                });
+            }
+            args.push(self.next_token().clone());
+            if Tk::Semicolon == self.peek().kind {
+                self.next_token();
+            }
+        }
+        self.expect(Tk::RightParen, "Expected ')' after paremeters");
+        self.expect(Tk::LeftBrace, "Expected '{' before function body");
+        let body = self.block()?;
+        Ok(Stmt::FnStmt(FnStmt::new(ident, args, body)))
     }
 
     fn for_statement(&mut self) -> Result<Stmt, InterpErr> {
