@@ -1,7 +1,10 @@
 fn main() {
-  x = 30;
-  print x;
+  sum(10, 20, 40);
 }
 
+
+fn sum(x, y, z) {
+  print x + y + z;
+}
 
 main();
