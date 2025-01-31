@@ -4,7 +4,6 @@ use crate::token::Token;
 
 define! {
     enum stmt ->  exprStmt(ExprStmt)
-                | printStmt(PrintStmt)
                 | letStmt(LetStmt)
                 | block(Vec<Stmt>)
                 | ifStmt(IfStmt)
@@ -16,7 +15,6 @@ define! {
     struct whileStmt -> condition(Expr), body(Box<Stmt>);
     struct ifStmt -> condition(Expr), if_branch(Box<Stmt>), else_branch(Option<Box<Stmt>>);
     struct exprStmt -> expr(Expr);
-    struct printStmt -> expr(Expr);
     struct letStmt -> ident(Token), initializer(Option<Expr>);
 
     enum expr ->  assign(Assign)

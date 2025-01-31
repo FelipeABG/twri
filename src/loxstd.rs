@@ -27,3 +27,23 @@ impl Callable for Clock {
         Box::new(Self {})
     }
 }
+
+pub struct Print {}
+impl Callable for Print {
+    fn call(&self, _: &mut Interpreter, args: Vec<LoxObject>) -> Result<LoxObject, InterpErr> {
+        args.iter().for_each(|a| println!("{a}"));
+        Ok(LoxObject::Null)
+    }
+
+    fn arity(&self) -> usize {
+        1
+    }
+
+    fn to_string(&self) -> String {
+        "<native fn show>".to_string()
+    }
+
+    fn clone_box(&self) -> Box<dyn Callable> {
+        Box::new(Print {})
+    }
+}

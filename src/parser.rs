@@ -1,6 +1,6 @@
 use crate::ast::{
-    Assign, Binary, Call, Expr, ExprStmt, FnStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt,
-    Stmt, Unary, WhileStmt,
+    Assign, Binary, Call, Expr, ExprStmt, FnStmt, IfStmt, LetStmt, Literal, Logical, Stmt, Unary,
+    WhileStmt,
 };
 use crate::error::InterpErr;
 use crate::error::InterpErr as Ie;
@@ -62,12 +62,6 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, InterpErr> {
-        if let Tk::Print = self.peek().kind {
-            //Consumes the 'print' token
-            self.next_token();
-            return self.print_statement();
-        }
-
         if let Tk::LeftBrace = self.peek().kind {
             //consumes the '{' token;
             self.next_token();
@@ -199,12 +193,6 @@ impl Parser {
 
         self.expect(Tk::RightBrace, "Expected '}' at end of block")?;
         Ok(stmts)
-    }
-
-    fn print_statement(&mut self) -> Result<Stmt, InterpErr> {
-        let expr = self.expression()?;
-        self.expect(Tk::Semicolon, "Expect ';' after value")?;
-        Ok(Stmt::PrintStmt(PrintStmt::new(expr)))
     }
 
     fn expr_statement(&mut self) -> Result<Stmt, InterpErr> {

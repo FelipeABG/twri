@@ -1,12 +1,12 @@
 use crate::{
     ast::{
-        Assign, Binary, Call, Expr, ExprStmt, FnStmt, IfStmt, LetStmt, Literal, Logical, PrintStmt,
-        Stmt, Unary, WhileStmt,
+        Assign, Binary, Call, Expr, ExprStmt, FnStmt, IfStmt, LetStmt, Literal, Logical, Stmt,
+        Unary, WhileStmt,
     },
     env::Environment,
     error::InterpErr,
     error::InterpErr as Ie,
-    loxstd::Clock,
+    loxstd::{Clock, Print},
     obj::{LoxFunction, LoxObject},
     token::TokenKind as Tk,
 };
@@ -24,7 +24,9 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         let mut globals = Rc::new(RefCell::new(Environment::new(None)));
+
         RefCell::borrow_mut(&mut globals).define("clock", LoxObject::Callable(Box::new(Clock {})));
+        RefCell::borrow_mut(&mut globals).define("print", LoxObject::Callable(Box::new(Print {})));
         Self {
             env: Rc::clone(&globals),
             globals: Rc::clone(&globals),
@@ -40,7 +42,6 @@ impl Interpreter {
     fn execute(&mut self, s: &Stmt) -> Result<(), InterpErr> {
         match s {
             Stmt::ExprStmt(expr_stmt) => self.expr_stmt_exec(expr_stmt),
-            Stmt::PrintStmt(print_stmt) => self.print_stmt_exec(print_stmt),
             Stmt::LetStmt(let_stmt) => self.let_stmt_exec(let_stmt),
             Stmt::Block(block) => self.block_stmt_exec(
                 block.iter().collect(),
@@ -107,12 +108,6 @@ impl Interpreter {
             }
         }
 
-        Ok(())
-    }
-
-    fn print_stmt_exec(&mut self, ps: &PrintStmt) -> Result<(), InterpErr> {
-        let value = self.evaluate(&ps.expr)?;
-        println!("{value}");
         Ok(())
     }
 

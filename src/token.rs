@@ -52,7 +52,6 @@ pub enum TokenKind {
     If,
     Null,
     Or,
-    Print,
     Return,
     Super,
     This,
