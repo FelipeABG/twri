@@ -1,10 +1,13 @@
 fn main() {
-  sum(10, 20, 40);
+  print(factorial(5));
 }
 
+fn factorial(n) {
+  if n == 1 {
+    return 1;
+  }
 
-fn sum(x, y, z) {
-  print(x + y + z);
+  return n * factorial(n-1);
 }
 
 main();

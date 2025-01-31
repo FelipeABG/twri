@@ -1,5 +1,9 @@
 use crate::{ast::FnStmt, env::Environment, error::InterpErr, interp::Interpreter};
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::{
+    cell::RefCell,
+    fmt::{Debug, Display},
+    rc::Rc,
+};
 
 pub trait Callable {
     fn call(&self, interp: &mut Interpreter, args: Vec<LoxObject>) -> Result<LoxObject, InterpErr>;
@@ -34,11 +38,19 @@ impl Callable for LoxFunction {
             env.define(&self.declaration.params[i].lexeme, args[i].clone());
         }
 
-        interp.block_stmt_exec(
+        match interp.block_stmt_exec(
             self.declaration.body.iter().collect(),
             Rc::new(RefCell::new(env)),
-        )?;
-        Ok(LoxObject::Null)
+        ) {
+            Ok(_) => Ok(LoxObject::Null),
+            Err(err) => match err {
+                InterpErr::Return { value } => match value {
+                    Some(v) => Ok(v),
+                    None => Ok(LoxObject::Null),
+                },
+                _ => Err(err),
+            },
+        }
     }
 
     fn arity(&self) -> usize {
@@ -86,6 +98,19 @@ impl Clone for LoxObject {
 }
 
 impl Display for LoxObject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let msg = match self {
+            LoxObject::Str(s) => format!("{s}"),
+            LoxObject::Number(n) => format!("{n}"),
+            LoxObject::Null => format!("null"),
+            LoxObject::Bool(b) => format!("{b}"),
+            LoxObject::Callable(c) => format!("{}", c.to_string()),
+        };
+        write!(f, "{msg}")
+    }
+}
+
+impl Debug for LoxObject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let msg = match self {
             LoxObject::Str(s) => format!("{s}"),

@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Assign, Binary, Call, Expr, ExprStmt, FnStmt, IfStmt, LetStmt, Literal, Logical, Stmt,
-        Unary, WhileStmt,
+        Assign, Binary, Call, Expr, ExprStmt, FnStmt, IfStmt, LetStmt, Literal, Logical,
+        ReturnStmt, Stmt, Unary, WhileStmt,
     },
     env::Environment,
     error::InterpErr,
@@ -50,7 +50,18 @@ impl Interpreter {
             Stmt::IfStmt(if_stmt) => self.if_stmt_exec(if_stmt),
             Stmt::WhileStmt(while_stmt) => self.while_stmt_exec(while_stmt),
             Stmt::FnStmt(fn_stmt) => self.fn_stmt_exec(fn_stmt),
+            Stmt::ReturnStmt(return_stmt) => self.return_stmt_exec(return_stmt),
         }
+    }
+
+    fn return_stmt_exec(&mut self, r: &ReturnStmt) -> Result<(), InterpErr> {
+        let mut value = None;
+
+        if let Some(v) = &r.expr {
+            value = Some(self.evaluate(&v)?);
+        }
+
+        Err(Ie::Return { value })
     }
 
     fn fn_stmt_exec(&mut self, f: &FnStmt) -> Result<(), InterpErr> {
