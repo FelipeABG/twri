@@ -21,18 +21,22 @@ pub enum LoxObject {
 }
 
 pub struct LoxFunction {
+    closure: Rc<RefCell<Environment>>,
     declaration: FnStmt,
 }
 
 impl LoxFunction {
-    pub fn new(declaration: FnStmt) -> Self {
-        Self { declaration }
+    pub fn new(declaration: FnStmt, closure: Rc<RefCell<Environment>>) -> Self {
+        Self {
+            declaration,
+            closure,
+        }
     }
 }
 
 impl Callable for LoxFunction {
     fn call(&self, interp: &mut Interpreter, args: Vec<LoxObject>) -> Result<LoxObject, InterpErr> {
-        let mut env = Environment::new(Some(Rc::clone(&interp.globals)));
+        let mut env = Environment::new(Some(Rc::clone(&self.closure)));
 
         for i in 0..self.declaration.params.len() {
             env.define(&self.declaration.params[i].lexeme, args[i].clone());
@@ -62,7 +66,10 @@ impl Callable for LoxFunction {
     }
 
     fn clone_box(&self) -> Box<dyn Callable> {
-        Box::new(LoxFunction::new(self.declaration.clone()))
+        Box::new(LoxFunction::new(
+            self.declaration.clone(),
+            Rc::clone(&self.closure),
+        ))
     }
 }
 

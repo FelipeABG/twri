@@ -1,13 +1,16 @@
-fn main() {
-  print(factorial(5));
+fn makeCounter() {
+   let i = 0;
+
+   fn counter() {
+      i = i + 1;
+      return i;
+   }
+
+   return counter;
 }
 
-fn factorial(n) {
-  if n == 1 {
-    return 1;
-  }
-
-  return n * factorial(n-1);
-}
-
-main();
+let counter = makeCounter();
+print(counter());
+print(counter());
+print(counter());
+print(counter());

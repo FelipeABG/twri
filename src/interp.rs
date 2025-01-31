@@ -65,7 +65,7 @@ impl Interpreter {
     }
 
     fn fn_stmt_exec(&mut self, f: &FnStmt) -> Result<(), InterpErr> {
-        let func = LoxFunction::new(f.clone());
+        let func = LoxFunction::new(f.clone(), Rc::clone(&self.env));
         RefCell::borrow_mut(&mut self.env)
             .define(&f.ident.lexeme, LoxObject::Callable(Box::new(func)));
         Ok(())
